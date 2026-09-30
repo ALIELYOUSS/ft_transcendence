@@ -5,7 +5,7 @@ services:
     volumes:
       - ./data/db:/var/lib/postgresql/data
     ports:
-      - 5433:5432
+      - "5432:5432"
     environment:
       POSTGRES_USER: ali
       POSTGRES_PASSWORD: 555
@@ -22,7 +22,7 @@ services:
     image: adminer:4
     restart: always
     ports:
-      - 8080:8080
+      - "8080:8080"
     networks:
       - bridge
 
