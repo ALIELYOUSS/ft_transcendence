@@ -74,7 +74,7 @@ Recommendations should be explainable to users, for example: "You both enjoy cod
 
 ```mermaid
 flowchart LR
-    Browser[React web client] --> API[NestJS API]
+    Browser[Next.js web client] --> API[NestJS API]
     Browser -. WebSocket .-> API
     API --> DB[(PostgreSQL)]
     API --> Auth[Google OAuth]
@@ -142,7 +142,7 @@ erDiagram
 
 | Area | Choice |
 | --- | --- |
-| Frontend | React |
+| Frontend | Next.js |
 | Backend | NestJS |
 | Database | PostgreSQL |
 | Authentication | Google OAuth |
@@ -187,7 +187,7 @@ cd wemeet
 
 ### Install dependencies
 
-Install dependencies in the frontend and backend directories:
+Install dependencies in the Next.js frontend and NestJS backend directories:
 
 ```bash
 cd backend
@@ -293,7 +293,7 @@ A change is ready for review when:
 
 ## Roadmap
 
-- [ ] Create the NestJS backend and React frontend structure
+- [ ] Create the NestJS backend and Next.js frontend structure
 - [ ] Add PostgreSQL schema and migrations
 - [ ] Implement Google authentication
 - [ ] Implement profiles and interests
