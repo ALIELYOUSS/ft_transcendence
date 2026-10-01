@@ -1,4 +1,13 @@
 export function EmailBar() {
+
+    interface FormData {
+        // username: string;
+        email: string;
+        password: string;
+    }
+    const respose = async (data:FormData) => {
+        
+    }
     return (
         <div className="justify-around flex flex-col items-center h-[378px] gap-[20px] w-[378px] rounded-[30px] p-10">
             <div className="flex items-start justify-start p-2 flex-col gap-3 w-[330px]">

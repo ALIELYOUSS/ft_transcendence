@@ -42,3 +42,15 @@ This file records the technology versions agreed for the wemeet project.
 - Prisma client generation: `npm run prisma:generate`
 - Prisma schema validation: `npm run prisma:validate`
 - Prisma development migration: `npm run prisma:migrate`
+
+
+<!-- User registration
+Real login
+Password hashing
+Password verification
+Input validation
+JWT or session authentication
+Proper error responses
+Frontend-to-backend login connection
+Auth tests for real database behavior
+User relations with other future models -->

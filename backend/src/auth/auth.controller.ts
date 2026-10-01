@@ -7,9 +7,10 @@ import { UpdateAuthDto } from './dto/update-auth.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('login')
+  @Post('register')
   create(@Body() createAuthDto: CreateAuthDto) {
-    return this.authService.create(createAuthDto);
+    console.log('createAuthDto:', createAuthDto);
+    // return this.authService.create(createAuthDto);
   }
 
   @Get('list')

@@ -1,5 +1,7 @@
 {
   "dependencies": {
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
     "postcss": "^8.5.28",
     "tailwindcss": "^4.3.3"
   },

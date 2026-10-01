@@ -8,6 +8,9 @@ datasource db {
 
 model User {
   id Int @id @default(autoincrement())
+  username String? @unique
   email String @unique
-  passwordHash String @unique
+  bio String?
+  avatar_url String?
+  password String
 }
