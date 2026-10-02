@@ -9,8 +9,7 @@ export class AuthController {
 
   @Post('register')
   create(@Body() createAuthDto: CreateAuthDto) {
-    console.log('createAuthDto:', createAuthDto);
-    // return this.authService.create(createAuthDto);
+    return this.authService.create(createAuthDto);
   }
 
   @Get('list')
@@ -24,7 +23,7 @@ export class AuthController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
+    update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
     return this.authService.update(+id, updateAuthDto);
   }
 

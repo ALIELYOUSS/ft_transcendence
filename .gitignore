@@ -1,1 +1,13 @@
-./data
+# Local database data
+/data/db/
+
+# Dependencies and generated output
+/node_modules/
+*/node_modules/
+frontend/.next/
+
+# Local logs and environment files
+*.log
+.env
+.env.*
+!.env.example
