@@ -6,11 +6,18 @@ datasource db {
   provider = "postgresql"
 }
 
+model Interest {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  users User[] @relation("UserInterests")
+}
+
 model User {
-  id Int @id @default(autoincrement())
-  username String? @unique
-  email String @unique
-  bio String?
+  id         Int        @id @default(autoincrement())
+  username   String     @unique
+  email      String     @unique
+  bio        String?
   avatar_url String?
-  password String
+  password   String
+  interests  Interest[] @relation("UserInterests")
 }

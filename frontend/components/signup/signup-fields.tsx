@@ -9,17 +9,15 @@ export function SignupFields() {
         label="Username"
         placeholder="user_example"
         autoComplete="username"
-        icon="user"
       />
       <Input
-        id="signup-email"
+        id="email"
         label="Email"
         type="email"
         placeholder="email@example.com"
         autoComplete="email"
-        icon="mail"
       />
-      <PasswordInput id="signup-password" placeholder="Minimum 8 characters" />
+      <PasswordInput id="password" placeholder="Minimum 8 characters" />
     </div>
   );
 }

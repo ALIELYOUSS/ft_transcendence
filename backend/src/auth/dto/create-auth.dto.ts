@@ -1,27 +1,26 @@
-import { IsEmail, IsNotEmpty } from "class-validator";
+import {
+  IsArray,
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  ArrayMinSize,
+} from 'class-validator';
+
 
 export class CreateAuthDto {
-    
-    @IsEmail()
-    email: string;
-    
-    @IsNotEmpty()
-    password: string;
+  @IsNotEmpty()
+  @IsString()
+  username: string;
 
+  @IsEmail()
+  email: string;
 
-    // @IsNotEmpty()
-    // username: string;
+  @IsNotEmpty()
+  @IsString()
+  password: string;
 
-    
-
-
-    // static schema = z.object({
-    //     username: z.string().min(3).max(20),
-    //     email: z.string().email(),
-    //     password: z.string().min(6).max(100),
-    // });
-
-    // email: string
-    // username: string
-    // password: string
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsString({ each: true })
+  interests: string[];
 }
