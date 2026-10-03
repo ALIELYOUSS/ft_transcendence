@@ -63,7 +63,7 @@ export class AuthService {
     });
   }
 
-  findOne(id: number) {
+  findOne(id: string) {
     return this.prisma.user.findUnique({
       where: { id },
       select: {
@@ -74,7 +74,7 @@ export class AuthService {
   }
 
 
-  update(id: number, updateAuthDto: UpdateAuthDto) {
+  update(id: string, updateAuthDto: UpdateAuthDto) {
     const { interests: _interests, ...data } = updateAuthDto;
     return this.prisma.user.update({
       where: { id },
@@ -82,7 +82,7 @@ export class AuthService {
     });
   }
 
-  remove(id: number) {
+  remove(id: string) {
     return this.prisma.user.delete({
       where: { id },
     });

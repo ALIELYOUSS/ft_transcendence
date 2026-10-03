@@ -7,17 +7,156 @@ datasource db {
 }
 
 model Interest {
-  id    Int    @id @default(autoincrement())
+  id    String @id @default(uuid()) @db.Uuid
   name  String @unique
   users User[] @relation("UserInterests")
 }
 
 model User {
-  id         Int        @id @default(autoincrement())
-  username   String     @unique
-  email      String     @unique
-  bio        String?
-  avatar_url String?
-  password   String
-  interests  Interest[] @relation("UserInterests")
+  id                    String                @id @default(uuid()) @db.Uuid
+  username              String                @unique
+  email                 String                @unique
+  bio                   String?
+  avatarUrl             String?               @map("avatar_url")
+  latitude              Float?
+  longitude             Float?
+  password              String
+  interests             Interest[]            @relation("UserInterests")
+  profile               Profile?
+  friends               Friend[]              @relation("UserFriends")
+  friendOf              Friend[]              @relation("FriendUsers")
+  posts                 Post[]
+  comments              Comment[]
+  likes                 Like[]
+  messages              Message[]
+  hostedSlots           Slot[]                @relation("SlotHost")
+  slotParticipants      SlotParticipant[]
+  groupChatParticipants GroupChatParticipant[]
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+}
+
+model Profile {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @db.Uuid
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Friend {
+  id         String       @id @default(uuid()) @db.Uuid
+  userId     String       @db.Uuid
+  friendId   String       @db.Uuid
+  status     FriendStatus
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  user       User         @relation("UserFriends", fields: [userId], references: [id])
+  friend     User         @relation("FriendUsers", fields: [friendId], references: [id])
+
+  @@unique([userId, friendId])
+}
+
+model Post {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  content   String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id])
+  comments  Comment[]
+  likes     Like[]
+}
+
+model Comment {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  postId    String   @db.Uuid
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id])
+}
+
+model Like {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  postId    String   @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id])
+
+  @@unique([userId, postId])
+}
+
+model Slot {
+  id             String           @id @default(uuid()) @db.Uuid
+  hostId         String           @db.Uuid @map("host_id")
+  title          String
+  location       String
+  capacityTarget Int              @map("capacity_target")
+  status         SlotStatus       @default(OPEN)
+  expiresAt      DateTime         @map("expires_at")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  host           User             @relation("SlotHost", fields: [hostId], references: [id])
+  participants   SlotParticipant[]
+  groupChat      GroupChat?
+}
+
+model SlotParticipant {
+  id        String   @id @default(uuid()) @db.Uuid
+  slotId    String   @db.Uuid @map("slot_id")
+  userId    String   @db.Uuid @map("user_id")
+  joinedAt  DateTime @default(now()) @map("joined_at")
+  slot      Slot     @relation(fields: [slotId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([slotId, userId])
+}
+
+model GroupChat {
+  id           String                @id @default(uuid()) @db.Uuid
+  slotId       String                @unique @db.Uuid @map("slot_id")
+  isActive     Boolean               @default(true) @map("is_active")
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  slot         Slot                  @relation(fields: [slotId], references: [id])
+  messages     Message[]
+  participants GroupChatParticipant[]
+}
+
+model Message {
+  id        String    @id @default(uuid()) @db.Uuid
+  chatId    String    @db.Uuid @map("chat_id")
+  senderId  String    @db.Uuid @map("sender_id")
+  content   String
+  createdAt DateTime  @default(now()) @map("created_at")
+  chat      GroupChat @relation(fields: [chatId], references: [id])
+  sender    User      @relation(fields: [senderId], references: [id])
+}
+
+model GroupChatParticipant {
+  id        String    @id @default(uuid()) @db.Uuid
+  chatId    String    @db.Uuid @map("chat_id")
+  userId    String    @db.Uuid @map("user_id")
+  createdAt DateTime  @default(now())
+  chat      GroupChat @relation(fields: [chatId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([chatId, userId])
+}
+
+enum FriendStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+enum SlotStatus {
+  OPEN
+  FULL
+  CLOSED
 }
