@@ -1,0 +1,28 @@
+POST http://localhost:3001/auth/login
+Content-Type: application/json
+
+
+{
+  "email": "example@gmail.com",
+  "password": "password123"
+}
+
+###
+DELETE http://localhost:3001/auth/
+# Content-Type: application/json
+
+# {
+#   "email": "example@,com",
+#   "password": "password123"
+# }
+
+###
+POST http://localhost:3001/auth/register
+Content-Type: application/json
+
+{
+  "username": "user1",
+  "email": "example@gmail.com",
+  "password": "password123",
+  "interests": ["programming", "gaming"]
+}

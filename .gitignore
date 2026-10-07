@@ -1,5 +1,5 @@
 # Local database data
-/data/db/
+data
 
 # Dependencies and generated output
 /node_modules/

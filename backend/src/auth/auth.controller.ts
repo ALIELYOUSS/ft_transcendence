@@ -7,6 +7,20 @@ import { UpdateAuthDto } from './dto/update-auth.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Get('google')
+  googleLogin() {
+    // Passport redirects the user to Google
+  }
+
+  @Get('google/callback')
+  googleCallback() {
+    // Google redirects here after authentication
+  }
+  @Post('login')
+  login(@Body() credentials: { email: string; password: string }) {
+    return this.authService.login(credentials.email, credentials.password);
+  }
+
   @Post('register')
   create(@Body() createAuthDto: CreateAuthDto) {
     return this.authService.create(createAuthDto);
