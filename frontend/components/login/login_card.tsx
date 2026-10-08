@@ -1,9 +1,10 @@
-import { LegalNotice } from "@/components/login/legal_notice";
-import { SignupPrompt } from "@/components/login/signup_prompt";    
+import { GoogleButton } from "@/components/auth/google-button";
+import { SignupPrompt } from "./signup_prompt";
+import { LegalNotice } from "./legal_notice";
 
 export function LoginCard() {
   return (
-    <div className="flex h-[598px] w-[390px] flex-col items-center rounded-xl border-2 border-[#E8E4D8] px-8 pt-10">
+    <div className="flex h-[620px] w-[390px] flex-col items-center rounded-xl border-2 border-[#E8E4D8] px-8 pt-10">
             <img
                 src="/logo.png"
                 alt="WeMeet logo"
@@ -19,20 +20,8 @@ export function LoginCard() {
                 Please enter your details to sign in to your account.
             </p>
 
-        <div className="mt-7 flex h-11 w-full items-center justify-center rounded-lg border border-[#E8E4D8] bg-white text-sm font-medium text-black hover:bg-[#d8d3c5]">
-            <button
-                type="button"
-                className="flex items-center">
-                Continue with Google
-                <div className="ml-2 flex h-[20px] w-[20px] items-center justify-center rounded-full">
-                    <img
-                        src="/google_logo.png"
-                        alt="Google logo"
-                        width={20}
-                        height={20}
-                        className="h-[20px] w-[20px] object-contain"/>
-                </div>
-            </button>
+        <div className="mt-7 w-full">
+            <GoogleButton label="Continue with Google" />
         </div>
 
         <div className="my-5 flex w-full items-center gap-3 text-xs text-white/60">
@@ -71,7 +60,10 @@ export function LoginCard() {
             className="mt-6 h-11 w-full rounded-lg border border-[#E8E4D8] bg-white text-sm font-semibold text-black hover:bg-[#d8d3c5]">
             Sign in
         </button>
-
+        <div className="mt-2">
+            <SignupPrompt />
+        </div>
+        <LegalNotice />
     </div>
   );
 }

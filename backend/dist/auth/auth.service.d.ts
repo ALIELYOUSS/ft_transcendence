@@ -4,11 +4,33 @@ import { PrismaService } from '../prisma/prisma.service';
 export declare class AuthService {
     private readonly prisma;
     constructor(prisma: PrismaService);
+    loginWithGoogle(googleUser: {
+        googleId: string;
+        email?: string;
+        username?: string;
+        interests?: string[];
+    }): Promise<{
+        accessToken: any;
+        refreshToken: any;
+        response: {
+            username: string;
+            email: string;
+            id: string;
+            googleId: string | null;
+            bio: string | null;
+            avatarUrl: string | null;
+            latitude: number | null;
+            longitude: number | null;
+            createdAt: Date;
+            updatedAt: Date;
+        };
+    }>;
     login(email: string, password: string): Promise<{
         response: {
             username: string;
             email: string;
             id: string;
+            googleId: string | null;
             bio: string | null;
             avatarUrl: string | null;
             latitude: number | null;
@@ -20,6 +42,7 @@ export declare class AuthService {
         accessToken: any;
         refreshToken: any;
     }>;
+    private createTokens;
     reg(createAuthDto: CreateAuthDto): Promise<{
         interests: {
             id: string;
@@ -28,6 +51,7 @@ export declare class AuthService {
         username: string;
         email: string;
         id: string;
+        googleId: string | null;
         bio: string | null;
         avatarUrl: string | null;
         latitude: number | null;
@@ -44,6 +68,7 @@ export declare class AuthService {
         username: string;
         email: string;
         id: string;
+        googleId: string | null;
         bio: string | null;
         avatarUrl: string | null;
         latitude: number | null;
@@ -65,6 +90,7 @@ export declare class AuthService {
         email: string;
         password: string;
         id: string;
+        googleId: string | null;
         bio: string | null;
         avatarUrl: string | null;
         latitude: number | null;
@@ -78,6 +104,7 @@ export declare class AuthService {
         email: string;
         password: string;
         id: string;
+        googleId: string | null;
         bio: string | null;
         avatarUrl: string | null;
         latitude: number | null;

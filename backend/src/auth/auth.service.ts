@@ -3,12 +3,63 @@ import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 
 
 @Injectable()
 export class AuthService {
 
   constructor(private readonly prisma: PrismaService) {}
+
+async loginWithGoogle(googleUser: {
+    googleId: string;
+    email?: string;
+    username?: string;
+    interests?: string[];
+  }) {
+    if (!googleUser.email) {
+      throw new ConflictException('Google account does not have an email');
+    }
+
+    let user = await this.prisma.user.findUnique({
+      where: { googleId: googleUser.googleId },
+    });
+
+    if (!user) {
+      user = await this.prisma.user.findUnique({
+        where: { email: googleUser.email },
+      });
+    }
+
+    if (user) {
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          googleId: googleUser.googleId,
+        },
+      });
+    } else {
+      const username = `${googleUser.username || googleUser.email.split('@')[0]}-${googleUser.googleId.slice(-6)}`;
+
+      user = await this.prisma.user.create({
+        data: {
+          username,
+          email: googleUser.email,
+          googleId: googleUser.googleId,
+          password: await bcrypt.hash(randomBytes(32).toString('hex'), 10),
+          intrests: {
+            connectOrCreate: [],
+          },
+        },
+
+      });
+    }
+
+    const tokens = await this.createTokens(user.id, user.email);
+    const { password: _, refreshedToken: __, ...response } = user;
+
+    return { response, ...tokens };
+  }
 
 async login(email: string, password: string) {
     const user = await this.prisma.user.findUnique({
@@ -24,28 +75,24 @@ async login(email: string, password: string) {
       throw new ConflictException('Invalid email or password');
     }
 
-    const jwtPayload = {
-      sub: user.id,
-      email: user.email,
-    };
+    const { accessToken, refreshToken } = await this.createTokens(user.id, user.email);
 
+    const { password: _, ...response } = user;
+    return {response, accessToken, refreshToken};
+  }
 
+  private async createTokens(userId: string, email: string) {
+    const jwtPayload = { sub: userId, email };
     const Jwt = require('jsonwebtoken');
     const accessToken = Jwt.sign(jwtPayload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
     const refreshToken = Jwt.sign(jwtPayload, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
 
-    const dbRefreshToken = await bcrypt.hash(refreshToken, 10);
     await this.prisma.user.update({
-      where: { id: user.id },
-      data: { 
-        refreshedToken: dbRefreshToken
-      },
+      where: { id: userId },
+      data: { refreshedToken: await bcrypt.hash(refreshToken, 10) },
     });
 
-    // this.prisma.user.refreshedToken = dbRefreshToken;
-
-    const { password: _, ...response } = user;
-    return {response, accessToken, refreshToken};
+    return { accessToken, refreshToken };
   }
 
 

@@ -46,10 +46,49 @@ exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const bcrypt = __importStar(require("bcrypt"));
+const crypto_1 = require("crypto");
 let AuthService = class AuthService {
     prisma;
     constructor(prisma) {
         this.prisma = prisma;
+    }
+    async loginWithGoogle(googleUser) {
+        if (!googleUser.email) {
+            throw new common_1.ConflictException('Google account does not have an email');
+        }
+        let user = await this.prisma.user.findUnique({
+            where: { googleId: googleUser.googleId },
+        });
+        if (!user) {
+            user = await this.prisma.user.findUnique({
+                where: { email: googleUser.email },
+            });
+        }
+        if (user) {
+            user = await this.prisma.user.update({
+                where: { id: user.id },
+                data: {
+                    googleId: googleUser.googleId,
+                },
+            });
+        }
+        else {
+            const username = `${googleUser.username || googleUser.email.split('@')[0]}-${googleUser.googleId.slice(-6)}`;
+            user = await this.prisma.user.create({
+                data: {
+                    username,
+                    email: googleUser.email,
+                    googleId: googleUser.googleId,
+                    password: await bcrypt.hash((0, crypto_1.randomBytes)(32).toString('hex'), 10),
+                    intrests: {
+                        connectOrCreate: [],
+                    },
+                },
+            });
+        }
+        const tokens = await this.createTokens(user.id, user.email);
+        const { password: _, refreshedToken: __, ...response } = user;
+        return { response, ...tokens };
     }
     async login(email, password) {
         const user = await this.prisma.user.findUnique({
@@ -62,22 +101,20 @@ let AuthService = class AuthService {
         if (!isPasswordValid) {
             throw new common_1.ConflictException('Invalid email or password');
         }
-        const jwtPayload = {
-            sub: user.id,
-            email: user.email,
-        };
+        const { accessToken, refreshToken } = await this.createTokens(user.id, user.email);
+        const { password: _, ...response } = user;
+        return { response, accessToken, refreshToken };
+    }
+    async createTokens(userId, email) {
+        const jwtPayload = { sub: userId, email };
         const Jwt = require('jsonwebtoken');
         const accessToken = Jwt.sign(jwtPayload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
         const refreshToken = Jwt.sign(jwtPayload, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
-        const dbRefreshToken = await bcrypt.hash(refreshToken, 10);
         await this.prisma.user.update({
-            where: { id: user.id },
-            data: {
-                refreshedToken: dbRefreshToken
-            },
+            where: { id: userId },
+            data: { refreshedToken: await bcrypt.hash(refreshToken, 10) },
         });
-        const { password: _, ...response } = user;
-        return { response, accessToken, refreshToken };
+        return { accessToken, refreshToken };
     }
     async reg(createAuthDto) {
         const { email, password, username, interests } = createAuthDto;
