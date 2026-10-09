@@ -10,7 +10,7 @@ export default function GoogleCallbackPage() {
 
     if (!accessToken || !refreshToken) {
       window.location.replace("/auth/login");
-      return;
+      return ;
     }
 
     localStorage.setItem("accessToken", accessToken);

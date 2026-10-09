@@ -15,6 +15,7 @@ import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -23,6 +24,16 @@ export class AuthController {
   @Get('google')
   @UseGuards(AuthGuard('google'))
   googleLogin() {
+  }
+
+  @Post('logout')
+  async logout(@Body() { refreshToken }:  RefreshTokenDto ) {
+    return this.authService.logout(refreshToken);
+  }
+
+  @Post('refresh')
+  async refresh(@Body() { refreshToken }: RefreshTokenDto) {
+    return this.authService.refresh(refreshToken);
   }
 
   @Get('google/callback')
@@ -42,6 +53,7 @@ export class AuthController {
 
     return response.redirect(`${frontendUrl}/auth/google/callback?${query.toString()}`);
   }
+  
   @Post('login')
   login(@Body() credentials: { email: string; password: string }) {
     return this.authService.login(credentials.email, credentials.password);

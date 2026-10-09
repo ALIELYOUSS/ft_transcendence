@@ -20,6 +20,7 @@ model User {
   avatarUrl             String?               @map("avatar_url")
   latitude              Float?
   longitude             Float?
+  role                  UserRole              @default(USER)
   password              String
   interests             Interest[]            @relation("UserInterests")
   profile               Profile?
@@ -149,6 +150,11 @@ model GroupChatParticipant {
   user      User      @relation(fields: [userId], references: [id])
 
   @@unique([chatId, userId])
+}
+
+enum UserRole {
+  USER
+  ADMIN
 }
 
 enum FriendStatus {

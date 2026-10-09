@@ -1,9 +1,12 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {  ConflictException, 
+          Injectable,
+          UnauthorizedException,} from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
+const Jwt = require('jsonwebtoken');
 
 
 @Injectable()
@@ -83,7 +86,6 @@ async login(email: string, password: string) {
 
   private async createTokens(userId: string, email: string) {
     const jwtPayload = { sub: userId, email };
-    const Jwt = require('jsonwebtoken');
     const accessToken = Jwt.sign(jwtPayload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
     const refreshToken = Jwt.sign(jwtPayload, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
 
@@ -95,6 +97,35 @@ async login(email: string, password: string) {
     return { accessToken, refreshToken };
   }
 
+async refresh(refreshToken: string) {
+  let payload: {
+    email: string;
+    sub: string;
+  };
+  try {
+    payload = Jwt.verify(
+      refreshToken,
+      process.env.REFRESH_TOKEN_SECRET) as { email: string; sub: string };
+  } catch (error) {
+    throw new UnauthorizedException('Invalid refresh token');
+  }
+
+  const user = await this.prisma.user.findUnique({
+    where: { id: payload.sub },
+  });
+
+  if (!user || !user.refreshedToken) {
+    throw new UnauthorizedException('Invalid refresh token');
+  }
+
+  const isRefreshTokenValid = await bcrypt.compare(refreshToken, user.refreshedToken);
+  if (!isRefreshTokenValid) {
+    throw new UnauthorizedException('Invalid refresh token');
+  }
+
+  const tokens = await this.createTokens(user.id, user.email);
+  return tokens;
+}
 
 async reg(createAuthDto: CreateAuthDto) {
     const { email, password, username, interests } = createAuthDto;
@@ -160,6 +191,32 @@ findOne(id: string) {
     });
   }
 
+async logout(refreshToken: string) {
+  let payload: { sub: string };
+
+  try {
+    payload = Jwt.verify(
+      refreshToken,
+      process.env.REFRESH_TOKEN_SECRET,
+    ) as { sub: string };
+  } catch {
+    throw new UnauthorizedException('Invalid refresh token');
+  }
+
+  await this.prisma.user.updateMany({
+    where: {
+      id: payload.sub,
+      refreshedToken: {
+        not: null,
+      },
+    },
+    data: {
+      refreshedToken: null,
+    },
+  });
+
+  return { message: 'Logged out successfully' };
+}
 
 update(id: string, updateAuthDto: UpdateAuthDto) {
     const { interests: _interests, ...data } = updateAuthDto;
