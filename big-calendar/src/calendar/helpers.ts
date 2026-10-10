@@ -88,6 +88,8 @@ export function getEventsCount(events: IEvent[], date: Date, view: TCalendarView
 
 // ================ Week and day view helper functions ================ //
 
+export const WEEK_HOUR_HEIGHT = 42;
+
 export function getCurrentEvents(events: IEvent[]) {
   const now = new Date();
   return events.filter(event => isWithinInterval(now, { start: parseISO(event.startDate), end: parseISO(event.endDate) })) || null;
