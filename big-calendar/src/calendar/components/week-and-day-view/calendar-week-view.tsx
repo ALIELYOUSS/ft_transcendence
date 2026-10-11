@@ -11,7 +11,7 @@ import { CalendarTimeline } from "@/calendar/components/week-and-day-view/calend
 import { WeekViewMultiDayEventsRow } from "@/calendar/components/week-and-day-view/week-view-multi-day-events-row";
 
 import { cn } from "@/lib/utils";
-import { groupEvents, getEventBlockStyle, isWorkingHour, getVisibleHours, WEEK_HOUR_HEIGHT } from "@/calendar/helpers";
+import { groupEvents, getEventBlockStyle, getVisibleHours, WEEK_HOUR_HEIGHT } from "@/calendar/helpers";
 
 import type { IEvent } from "@/calendar/interfaces";
 
@@ -21,7 +21,7 @@ interface IProps {
 }
 
 export function CalendarWeekView({ singleDayEvents, multiDayEvents }: IProps) {
-  const { selectedDate, workingHours, visibleHours } = useCalendar();
+  const { selectedDate, visibleHours } = useCalendar();
 
   const { hours, earliestEventHour, latestEventHour } = getVisibleHours(visibleHours, singleDayEvents);
 
@@ -75,10 +75,8 @@ export function CalendarWeekView({ singleDayEvents, multiDayEvents }: IProps) {
                   return (
                     <div key={dayIndex} className={cn("relative", isSameDay(day, today) ? "bg-[#fffaf0]" : "bg-[#f8f9fd]")}>
                       {hours.map((hour, index) => {
-                        const isDisabled = !isWorkingHour(day, hour, workingHours);
-
                         return (
-                          <div key={hour} className={cn("relative", isDisabled && "bg-calendar-disabled-hour")} style={{ height: `${WEEK_HOUR_HEIGHT}px` }}>
+                          <div key={hour} className={cn("relative", /* isDisabled && "bg-calendar-disabled-hour" */)} style={{ height: `${WEEK_HOUR_HEIGHT}px` }}>
                             {index !== 0 && <div className="pointer-events-none absolute inset-x-0 top-0 border-b border-[#e7eaf1]"></div>}
                             <div className="pointer-events-none absolute inset-x-0 top-1/2 border-b border-dashed border-[#e2e5ed]"></div>
 
