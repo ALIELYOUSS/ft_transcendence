@@ -66,7 +66,7 @@ export function EditEventDialog({ children, event }: IProps) {
       ...event,
       user,
       title: values.title,
-      color: values.color,
+      color: event.color,
       description: values.description,
       startDate: startDateTime.toISOString(),
       endDate: endDateTime.toISOString(),
@@ -79,11 +79,11 @@ export function EditEventDialog({ children, event }: IProps) {
     <Dialog open={isOpen} onOpenChange={onToggle}>
       <DialogTrigger asChild>{children}</DialogTrigger>
 
-      <DialogContent>
+      <DialogContent className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] overflow-y-auto rounded-[20px] border-[#ece5dc] bg-[#f8f8f6] text-[#252a37] shadow-[0_20px_50px_rgba(18,22,30,0.12)]">
         <DialogHeader>
-          <DialogTitle>Edit Event</DialogTitle>
-          <DialogDescription>
-            <AlertTriangle className="mr-1 inline-block size-4 text-yellow-500" />
+          <DialogTitle className="text-[#252a37]">Edit Event</DialogTitle>
+          <DialogDescription className="leading-relaxed text-[#767d8d]">
+            <AlertTriangle className="mr-1 inline-block size-4 text-[#d99d00]" />
             This form only updates the current event state locally for demonstration purposes. If you move an event after editing, some inconsistencies may
             occur. In a real application, you should submit this form to a backend API to persist the changes.
           </DialogDescription>
@@ -99,13 +99,16 @@ export function EditEventDialog({ children, event }: IProps) {
                   <FormLabel>Responsible</FormLabel>
                   <FormControl>
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger data-invalid={fieldState.invalid}>
+                      <SelectTrigger
+                        className="border-[#dfe3ed] bg-white text-[#3a4253] data-[placeholder]:text-[#767d8d] focus:ring-[#efb92d]"
+                        data-invalid={fieldState.invalid}
+                      >
                         <SelectValue placeholder="Select an option" />
                       </SelectTrigger>
 
-                      <SelectContent>
+                      <SelectContent className="border-[#ece5dc] bg-white text-[#3a4253]">
                         {users.map(user => (
-                          <SelectItem key={user.id} value={user.id} className="flex-1">
+                          <SelectItem key={user.id} value={user.id} className="flex-1 focus:bg-[#eef1f5] focus:text-[#252a37]">
                             <div className="flex items-center gap-2">
                               <Avatar key={user.id} className="size-6">
                                 <AvatarImage src={user.picturePath ?? undefined} alt={user.name} />
@@ -132,7 +135,13 @@ export function EditEventDialog({ children, event }: IProps) {
                   <FormLabel htmlFor="title">Title</FormLabel>
 
                   <FormControl>
-                    <Input id="title" placeholder="Enter a title" data-invalid={fieldState.invalid} {...field} />
+                    <Input
+                      id="title"
+                      placeholder="Enter a title"
+                      className="border-[#dfe3ed] bg-white text-[#252a37] placeholder:text-[#767d8d] focus-visible:ring-[#efb92d]"
+                      data-invalid={fieldState.invalid}
+                      {...field}
+                    />
                   </FormControl>
 
                   <FormMessage />
@@ -140,7 +149,7 @@ export function EditEventDialog({ children, event }: IProps) {
               )}
             />
 
-            <div className="flex items-start gap-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="startDate"
@@ -154,6 +163,7 @@ export function EditEventDialog({ children, event }: IProps) {
                         value={field.value}
                         onSelect={date => field.onChange(date as Date)}
                         placeholder="Select a date"
+                        className="border-[#dfe3ed] bg-white text-[#3a4253] hover:bg-[#f6f7fb] hover:text-[#3a4253] focus-visible:ring-[#efb92d]"
                         data-invalid={fieldState.invalid}
                       />
                     </FormControl>
@@ -171,7 +181,14 @@ export function EditEventDialog({ children, event }: IProps) {
                     <FormLabel>Start Time</FormLabel>
 
                     <FormControl>
-                      <TimeInput value={field.value as TimeValue} onChange={field.onChange} hourCycle={12} data-invalid={fieldState.invalid} />
+                      <TimeInput
+                        value={field.value as TimeValue}
+                        onChange={field.onChange}
+                        hourCycle={12}
+                        dateInputClassName="border-[#dfe3ed] bg-white text-[#3a4253] data-[focus-within]:ring-[#efb92d]"
+                        segmentClassName="text-[#3a4253] data-[focused]:bg-[#efb92d]/20 data-[focused]:text-[#252a37] data-[placeholder]:text-[#767d8d]"
+                        data-invalid={fieldState.invalid}
+                      />
                     </FormControl>
 
                     <FormMessage />
@@ -180,7 +197,7 @@ export function EditEventDialog({ children, event }: IProps) {
               />
             </div>
 
-            <div className="flex items-start gap-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="endDate"
@@ -192,6 +209,7 @@ export function EditEventDialog({ children, event }: IProps) {
                         value={field.value}
                         onSelect={date => field.onChange(date as Date)}
                         placeholder="Select a date"
+                        className="border-[#dfe3ed] bg-white text-[#3a4253] hover:bg-[#f6f7fb] hover:text-[#3a4253] focus-visible:ring-[#efb92d]"
                         data-invalid={fieldState.invalid}
                       />
                     </FormControl>
@@ -207,7 +225,14 @@ export function EditEventDialog({ children, event }: IProps) {
                   <FormItem className="flex-1">
                     <FormLabel>End Time</FormLabel>
                     <FormControl>
-                      <TimeInput value={field.value as TimeValue} onChange={field.onChange} hourCycle={12} data-invalid={fieldState.invalid} />
+                      <TimeInput
+                        value={field.value as TimeValue}
+                        onChange={field.onChange}
+                        hourCycle={12}
+                        dateInputClassName="border-[#dfe3ed] bg-white text-[#3a4253] data-[focus-within]:ring-[#efb92d]"
+                        segmentClassName="text-[#3a4253] data-[focused]:bg-[#efb92d]/20 data-[focused]:text-[#252a37] data-[placeholder]:text-[#767d8d]"
+                        data-invalid={fieldState.invalid}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -217,82 +242,18 @@ export function EditEventDialog({ children, event }: IProps) {
 
             <FormField
               control={form.control}
-              name="color"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>Color</FormLabel>
-                  <FormControl>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger data-invalid={fieldState.invalid}>
-                        <SelectValue placeholder="Select an option" />
-                      </SelectTrigger>
-
-                      <SelectContent>
-                        <SelectItem value="blue">
-                          <div className="flex items-center gap-2">
-                            <div className="size-3.5 rounded-full bg-blue-600" />
-                            Blue
-                          </div>
-                        </SelectItem>
-
-                        <SelectItem value="green">
-                          <div className="flex items-center gap-2">
-                            <div className="size-3.5 rounded-full bg-green-600" />
-                            Green
-                          </div>
-                        </SelectItem>
-
-                        <SelectItem value="red">
-                          <div className="flex items-center gap-2">
-                            <div className="size-3.5 rounded-full bg-red-600" />
-                            Red
-                          </div>
-                        </SelectItem>
-
-                        <SelectItem value="yellow">
-                          <div className="flex items-center gap-2">
-                            <div className="size-3.5 rounded-full bg-yellow-600" />
-                            Yellow
-                          </div>
-                        </SelectItem>
-
-                        <SelectItem value="purple">
-                          <div className="flex items-center gap-2">
-                            <div className="size-3.5 rounded-full bg-purple-600" />
-                            Purple
-                          </div>
-                        </SelectItem>
-
-                        <SelectItem value="orange">
-                          <div className="flex items-center gap-2">
-                            <div className="size-3.5 rounded-full bg-orange-600" />
-                            Orange
-                          </div>
-                        </SelectItem>
-
-                        <SelectItem value="gray">
-                          <div className="flex items-center gap-2">
-                            <div className="size-3.5 rounded-full bg-neutral-600" />
-                            Gray
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
               name="description"
               render={({ field, fieldState }) => (
                 <FormItem>
                   <FormLabel>Description</FormLabel>
 
                   <FormControl>
-                    <Textarea {...field} value={field.value} data-invalid={fieldState.invalid} />
+                    <Textarea
+                      {...field}
+                      value={field.value}
+                      className="min-h-[88px] border-[#dfe3ed] bg-white text-[#252a37] placeholder:text-[#767d8d] focus-visible:ring-[#efb92d]"
+                      data-invalid={fieldState.invalid}
+                    />
                   </FormControl>
 
                   <FormMessage />
@@ -302,14 +263,22 @@ export function EditEventDialog({ children, event }: IProps) {
           </form>
         </Form>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2">
           <DialogClose asChild>
-            <Button type="button" variant="outline">
+            <Button
+              type="button"
+              variant="outline"
+              className="border-[#dfe3ed] bg-white text-[#3a4253] hover:bg-[#f6f7fb] hover:text-[#252a37]"
+            >
               Cancel
             </Button>
           </DialogClose>
 
-          <Button form="event-form" type="submit">
+          <Button
+            form="event-form"
+            type="submit"
+            className="bg-[#efb92d] text-[#282313] shadow-sm hover:bg-[#e7ad1d] focus-visible:ring-[#efb92d]"
+          >
             Save changes
           </Button>
         </DialogFooter>

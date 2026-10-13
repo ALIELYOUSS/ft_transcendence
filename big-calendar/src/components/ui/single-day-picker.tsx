@@ -33,7 +33,7 @@ function SingleDayPicker({ id, onSelect, className, placeholder, labelVariant = 
         <Button
           id={id}
           variant="outline"
-          className={cn("group relative h-9 w-full justify-start whitespace-nowrap px-3 py-2 font-normal hover:bg-inherit", className)}
+          className={cn("group relative h-9 w-full justify-start whitespace-nowrap px-3 py-2 font-normal bg-[#F59E0B] hover:bg-inherit", className)}
           {...props}
         >
           {value && <span>{format(value, labelVariant)}</span>}

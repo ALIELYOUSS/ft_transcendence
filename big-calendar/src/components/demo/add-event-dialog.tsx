@@ -128,7 +128,7 @@ export function AddEventDialog({
                 control={form.control}
                 name="startDate"
                 render={({ field, fieldState }) => (
-                  <FormItem className="flex-1">
+                  <FormItem className="flex-1 color">
                     <FormLabel htmlFor="startDate">Start Date</FormLabel>
 
                     <FormControl>
@@ -150,7 +150,7 @@ export function AddEventDialog({
                 control={form.control}
                 name="startTime"
                 render={({ field, fieldState }) => (
-                  <FormItem className="flex-1">
+                  <FormItem className="flex-1 ">
                     <FormLabel>Start Time</FormLabel>
 
                     <FormControl>

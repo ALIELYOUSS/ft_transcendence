@@ -1,6 +1,30 @@
 @import "tailwindcss";
 @source "../../big-calendar/src";
 
+
+
+:root {
+  --color-role-base: #0b0e12;
+  --color-role-black: #000000;
+  --color-role-white: #ffffff;
+  --color-role-amber: #f8b50e;
+  --color-role-amber-bright: #ffd66b;
+  --color-role-cool: #3c64c8;
+  --color-role-input: #e8e4d8;
+  --color-role-input-hover: #f3f0e8;
+
+  --color-role-subtext: rgb(255 255 255 / 60%);
+  --color-role-border: rgb(255 255 255 / 10%);
+  --color-role-amber-glow: rgb(248 181 14 / 14%);
+  --color-role-amber-soft: rgb(248 181 14 / 6%);
+  --color-role-cream-glow: rgb(255 255 255 / 4%);
+  --color-role-cool-glow: rgb(60 100 200 / 5%);
+
+  --background: var(--color-role-base);
+  --foreground: var(--color-role-white);
+}
+
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -22,6 +46,8 @@
   --destructive-foreground: 0 0% 98%;
   --ring: 240 5.9% 10%;
 }
+
+
 
 @theme inline {
   --color-background: var(--background);
