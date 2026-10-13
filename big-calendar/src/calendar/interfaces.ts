@@ -2,8 +2,6 @@ import type { TEventColor } from "@/calendar/types";
 
 export interface IUser {
   id: string;
-  name: string;
-  picturePath: string | null;
 }
 
 export interface IEvent {
