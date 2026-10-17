@@ -27,7 +27,7 @@ const Sidebar = () => {
     <>
       <aside className="fixed inset-x-0 bottom-0 z-40 flex h-16 w-full flex-row items-center  border border-b-0 border-[#e7e0d8] bg-[#f8f8f6] px-3 py-2 text-[#767d8d] lg:static lg:h-auto lg:w-22 lg:shrink-0 lg:flex-col  lg:border lg:px-0 lg:py-6">
           <button
-        className="fixed bottom-4 left-4 z-40 grid h-12 w-12 place-items-center rounded-2xl border border-[#ece5dc] bg-[#f8f8f6] transition-colors hover:border-[#efb92d] hover:bg-[#fff8e6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#efb92d] lg:bottom-auto lg:left-3 lg:top-3 lg:h-16 lg:w-16"
+        className="fixed bottom-4 left-4 z-40 grid h-12 w-12 place-items-center rounded-2xl border border-[#ece5dc] bg-[#f8f8f6] transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-110 hover:border-[#efb92d] hover:bg-[#fff8e6] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#efb92d] lg:bottom-auto lg:left-3 lg:top-3 lg:h-16 lg:w-16"
             type="button"
             aria-label="Hide sidebar"
             title="Hide sidebar"
@@ -52,7 +52,7 @@ const Sidebar = () => {
               return (
                 <Link
                   key={label}
-                  className={`grid h-18 w-14 place-items-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#efb92d] lg:h-9 ${
+                  className={`grid h-18 w-14 place-items-center rounded-xl transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-110 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#efb92d] lg:h-9 ${
                     active
                       ? "border border-[#efb92d]/40 bg-[#fff4d6] text-[#a87300]"
                       : "text-[#767d8d] hover:bg-[#f3f0e8] hover:text-[#252a37]"
@@ -67,7 +67,7 @@ const Sidebar = () => {
               );
             })}
             <button
-              className="grid h-11 w-14 place-items-center rounded-xl transition-colors hover:bg-[#f3f0e8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#efb92d] lg:hidden"
+              className="grid h-11 w-14 place-items-center rounded-xl transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-110 hover:bg-[#f3f0e8] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#efb92d] lg:hidden"
               type="button"
               aria-label="Hide sidebar"
               title="Hide sidebar"
@@ -101,19 +101,24 @@ const Sidebar = () => {
 
   <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500" />
 </button>
-        <div className="ml-auto h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#7C5800] sm:h-12 sm:w-12">
+        <button
+          type="button"
+          aria-label="Profile"
+          title="Profile"
+          className="ml-auto h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#7C5800] transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-110 hover:shadow-md active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#efb92d] sm:h-12 sm:w-12"
+        >
           <img
             src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTH37MxCuOqN0ROHlzaycbQacKpH9ObC49BmO2290bH7A&s=10"
             alt="Profile"
             className="h-full w-full object-cover"
           />
-        </div>
+        </button>
  
       </aside>
       </>
     ) : (
       <button
-        className="fixed bottom-4 left-4 z-40 grid h-12 w-12 place-items-center rounded-2xl border border-[#ece5dc] bg-[#f8f8f6] transition-colors hover:border-[#efb92d] hover:bg-[#fff8e6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#efb92d] lg:bottom-auto lg:left-3 lg:top-3 lg:h-16 lg:w-16"
+        className="fixed bottom-4 left-4 z-40 grid h-12 w-12 place-items-center rounded-2xl border border-[#ece5dc] bg-[#f8f8f6] transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-110 hover:border-[#efb92d] hover:bg-[#fff8e6] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#efb92d] lg:bottom-auto lg:left-3 lg:top-3 lg:h-16 lg:w-16"
         type="button"
         aria-label="Show sidebar"
         title="Show sidebar"
