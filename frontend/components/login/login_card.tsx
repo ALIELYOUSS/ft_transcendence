@@ -1,3 +1,5 @@
+"use client"
+
 import { GoogleButton } from "@/components/auth/google-button";
 import { SignupPrompt } from "./signup_prompt";
 import { LegalNotice } from "./legal_notice";
@@ -84,7 +86,7 @@ return (
         <button
             type="submit"
             onSubmit={(e) => {e.preventDefault(); handleLogin();}}
-            className="mt-6 h-11 w-full rounded-lg border border-[#E8E4D8] bg-white text-sm font-semibold text-black hover:bg-[#d8d3c5]">
+            className="mt-6 h-11 w-full rounded-lg border border-[#f8b50e] bg-linear-to-r from-[#f8b50e] to-[#ffd66b] text-sm font-semibold text-black transition hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-[#f8b50e] focus:ring-offset-2">
             Sign in
         </button>
         <div className="mt-2">
