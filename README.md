@@ -1,112 +1,402 @@
-# WeMeet User Management
+# WeMeet Project Documentation
 
-This document describes the user-management work currently set up in the WeMeet project. It covers the Next.js authentication screens, the NestJS authentication API, PostgreSQL/Prisma persistence, and the current implementation status.
+## 1. Project overview
 
-## Architecture
+WeMeet is a social platform designed to help users create profiles, discover
+people with shared interests, create activities, and communicate in group
+chats. The current implementation establishes the application foundation:
+
+- a Next.js frontend;
+- a NestJS backend API;
+- PostgreSQL persistence through Prisma;
+- user registration and login;
+- Google OAuth login;
+- JWT access and refresh tokens;
+- user, interest, social, activity, and chat data models.
+
+The project is currently at the stage where the authentication foundation is
+mostly present, but protected application pages and authorization still need
+to be completed before the rest of the platform can safely use user data.
+
+## 2. Overall architecture
 
 ```mermaid
 flowchart LR
-	Browser[Next.js frontend\nlocalhost:3000] -->|POST /auth/register\nPOST /auth/login| API[NestJS API\nlocalhost:3001]
-	Browser -->|GET /auth/google| API
-	API -->|OAuth redirect| Google[Google OAuth]
-	Google -->|GET /auth/google/callback| API
-	API -->|redirect with tokens| Callback[Next.js Google callback]
-	Callback -->|store accessToken + refreshToken| Browser
-	API --> Auth[AuthService]
-	Auth -->|Prisma Client| DB[(PostgreSQL\nlocalhost:5432)]
-	Adminer[Adminer\nlocalhost:8080] --> DB
+    Browser["Browser<br/>Next.js :3000"]
+    API["NestJS API<br/>:3001"]
+    DB[("PostgreSQL<br/>:5432")]
+    Adminer["Adminer<br/>:8080"]
+    Google["Google OAuth"]
+
+    Browser -->|"HTTP / JSON"| API
+    Browser -->|"OAuth start"| API
+    API -->|"Prisma"| DB
+    Adminer --> DB
+    API -->|"OAuth redirect"| Google
+    Google -->|"OAuth callback"| API
+    API -->|"Redirect with tokens"| Browser
 ```
 
-## Technology and services
+### Main responsibilities
 
-| Area | Technology | Current setup |
+| Layer | Location | Responsibility |
 | --- | --- | --- |
-| Frontend | Next.js, React, TypeScript | Next.js 16.3.6, React 19.2.8 |
-| Backend | NestJS, TypeScript | NestJS 12.0.1, TypeScript 6.0.2 |
-| Persistence | PostgreSQL and Prisma | PostgreSQL 17-alpine, Prisma 7.10.0 |
-| Authentication | bcrypt, JWT, Passport Google OAuth | Access token: 15 minutes; refresh token: 7 days |
-| API documentation | Swagger | `http://localhost:3001/docs` |
+| Frontend | [`frontend/`](../frontend/) | Pages, forms, user interaction, token storage |
+| Backend | [`backend/src/`](../backend/src/) | API routes, validation, authentication, OAuth |
+| Database | [`backend/prisma/schema.prisma`](../backend/prisma/schema.prisma) | Users and application data |
+| Database runtime | [`docker-compose.yml`](../docker-compose.yml) | PostgreSQL and Adminer containers |
+| Documentation | [`README.md`](../README.md) | Quick project overview and setup |
 
-## User-management flow
+## 3. Technology stack
 
-### Email registration
+### Frontend
 
-1. The signup page collects `username`, `email`, `password`, and at least one interest.
-2. The frontend sends the data to `POST /auth/register`.
-3. NestJS validates the DTO using the global `ValidationPipe`.
-4. The password is hashed with bcrypt before it is stored.
-5. Interests are created or reused with Prisma `connectOrCreate`.
-6. The response excludes the password.
+- Next.js `16.3.6`
+- React `19.2.8`
+- TypeScript
+- Tailwind CSS
+- Next.js App Router
 
-### Email login
+The frontend contains authentication routes under
+[`frontend/app/auth/`](../frontend/app/auth/):
 
-1. The login page sends `email` and `password` to `POST /auth/login`.
-2. The backend looks up the user and verifies the password with bcrypt.
-3. The backend creates an access token and refresh token.
-4. The refresh token is bcrypt-hashed and stored on the user record.
-5. The frontend stores both returned tokens in `localStorage`.
+- `/auth/login`
+- `/auth/signup`
+- `/auth/google/callback`
 
-### Google login and signup
+### Backend
 
-1. The frontend links to `GET /auth/google`.
-2. Passport redirects the user to Google with `email` and `profile` scopes.
-3. The callback finds the user by Google ID or email, or creates a new user.
-4. The API redirects to `/auth/google/callback` with the access and refresh tokens.
-5. The callback page stores the tokens in `localStorage` and returns to the login page.
+- NestJS `12`
+- TypeScript
+- Passport
+- Passport Google OAuth 2.0
+- JSON Web Tokens
+- bcrypt
+- class-validator
+- Swagger
 
-### Token refresh and logout
+The backend starts on port `3001` by default. The bootstrap configuration is
+in [`backend/src/main.ts`](../backend/src/main.ts).
 
-- `POST /auth/refresh` verifies the refresh JWT and compares it with the stored bcrypt hash before issuing new tokens.
-- `POST /auth/logout` invalidates the stored refresh token.
-- Access-token guards for protected routes are not set up yet.
+### Database
 
-## Current API endpoints
+- PostgreSQL `17-alpine`
+- Prisma `7`
+- Adminer for browser-based database inspection
 
-All endpoints are under the backend origin, currently `http://localhost:3001`.
+The database container is configured in
+[`docker-compose.yml`](../docker-compose.yml). Prisma migrations are stored
+under [`backend/prisma/migrations/`](../backend/prisma/migrations/).
 
-| Method | Route | Purpose |
-| --- | --- | --- |
-| `POST` | `/auth/register` | Create a user with interests |
-| `POST` | `/auth/login` | Authenticate with email and password |
-| `GET` | `/auth/google` | Start Google OAuth |
-| `GET` | `/auth/google/callback` | Complete Google OAuth |
-| `POST` | `/auth/refresh` | Rotate access and refresh tokens |
-| `POST` | `/auth/logout` | Invalidate the refresh token |
-| `GET` | `/auth/list` | List user IDs and emails |
-| `GET` | `/auth/:id` | Read a user ID and email |
-| `PATCH` | `/auth/:id` | Update user fields |
-| `DELETE` | `/auth/:id` | Delete a user |
+## 4. Backend structure
 
-The CRUD routes are currently public. Authorization and role checks still need to be added before exposing them beyond local development.
+```mermaid
+flowchart TD
+    Main["main.ts"]
+    App["AppModule"]
+    AuthModule["AuthModule"]
+    AuthController["AuthController"]
+    AuthService["AuthService"]
+    GoogleStrategy["GoogleStrategy"]
+    PrismaModule["PrismaModule"]
+    PrismaService["PrismaService"]
+    Database[("PostgreSQL")]
 
-## Data model
+    Main --> App
+    App --> AuthModule
+    App --> PrismaModule
+    AuthModule --> AuthController
+    AuthModule --> AuthService
+    AuthModule --> GoogleStrategy
+    AuthModule --> PrismaModule
+    PrismaModule --> PrismaService
+    AuthService --> PrismaService
+    PrismaService --> Database
+```
 
-The main `User` model is defined in `backend/prisma/schema.prisma` and currently contains:
+### Application bootstrap
 
-- Identity: UUID `id`, unique `username`, unique `email`.
-- Profile data: optional `bio`, `avatarUrl`, latitude, and longitude.
-- Authentication: bcrypt `password`, optional `googleId`, and hashed `refreshedToken`.
-- Authorization: `role`, currently `USER` or `ADMIN`.
-- Social data: interests, profile, friends, posts, comments, likes, slots, and group chats.
-- Timestamps: `createdAt` and `updatedAt`.
+[`backend/src/main.ts`](../backend/src/main.ts) performs the following work:
 
-The database already has Prisma migrations under `backend/prisma/migrations/`. Run Prisma generation and validation after changing the schema.
+1. Creates the NestJS application.
+2. Enables Swagger at `/docs`.
+3. Enables a global `ValidationPipe` with `whitelist: true`.
+4. Enables CORS for frontend-to-backend requests.
+5. Listens on `PORT`, or `3001` when `PORT` is not defined.
 
-## Frontend routes and components
+### Authentication module
 
-| Route | Purpose |
-| --- | --- |
-| `/auth/login` | Email/password login and Google login entry point |
-| `/auth/signup` | User registration and interest selection |
-| `/auth/google/callback` | Stores Google OAuth tokens in the browser |
-| `/privacy` | Privacy page |
-| `/terms` | Terms page |
+[`backend/src/auth/auth.module.ts`](../backend/src/auth/auth.module.ts)
+registers:
 
-The main auth UI is composed from `frontend/components/login`, `frontend/components/signup`, and `frontend/components/auth`.
+- `AuthController`;
+- `AuthService`;
+- `GoogleStrategy`;
+- `ConfigModule`;
+- `PrismaModule`.
 
-## Environment variables
+Google configuration is loaded by
+[`backend/src/auth/google-oauth.config.ts`](../backend/src/auth/google-oauth.config.ts).
 
-The backend requires a database URL and token secrets. Google login additionally requires:
+## 5. Authentication implementation
+
+### 5.1 Email registration
+
+The registration form is implemented in
+[`frontend/components/signup/signup_card.tsx`](../frontend/components/signup/signup_card.tsx).
+It sends a request to `POST /auth/register` containing:
+
+```json
+{
+  "username": "example-user",
+  "email": "user@example.com",
+  "password": "password",
+  "interests": ["sport", "music"]
+}
+```
+
+The backend validates the request with
+[`create-auth.dto.ts`](../backend/src/auth/dto/create-auth.dto.ts):
+
+- `username` must be a non-empty string;
+- `email` must be a valid email;
+- `password` must be a non-empty string;
+- at least one interest is required.
+
+The service then:
+
+1. checks whether the email already exists;
+2. hashes the password with bcrypt;
+3. creates or reuses interests with Prisma `connectOrCreate`;
+4. creates the user;
+5. removes the password from the returned response.
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Frontend
+    participant API
+    participant Database
+
+    User->>Frontend: Fill registration form
+    Frontend->>API: POST /auth/register
+    API->>API: Validate DTO
+    API->>Database: Check email
+    API->>API: Hash password with bcrypt
+    API->>Database: Create user and connect interests
+    Database-->>API: New user
+    API-->>Frontend: User data without password
+    Frontend-->>User: Show success or error
+```
+
+### 5.2 Email login
+
+The login UI is in
+[`frontend/components/login/login_card.tsx`](../frontend/components/login/login_card.tsx).
+The backend login logic is in
+[`backend/src/auth/auth.service.ts`](../backend/src/auth/auth.service.ts).
+
+The intended flow is:
+
+1. frontend submits email and password;
+2. backend finds the user;
+3. bcrypt compares the submitted password with the stored hash;
+4. backend creates an access token and refresh token;
+5. backend stores a bcrypt hash of the refresh token;
+6. frontend stores the returned tokens.
+
+The access token expires after 15 minutes. The refresh token expires after
+7 days.
+
+### 5.3 Google OAuth
+
+The Google button is implemented in
+[`frontend/components/auth/google-button.tsx`](../frontend/components/auth/google-button.tsx).
+It starts the flow with `GET /auth/google`.
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Frontend
+    participant API
+    participant Google
+    participant Database
+
+    User->>Frontend: Click Google login
+    Frontend->>API: GET /auth/google
+    API->>Google: Redirect for consent
+    Google-->>API: GET /auth/google/callback
+    API->>API: GoogleStrategy validates profile
+    API->>Database: Find by googleId or email
+    alt Existing user
+        API->>Database: Link googleId
+    else New user
+        API->>Database: Create user
+    end
+    API->>API: Create JWT tokens
+    API-->>Frontend: Redirect with tokens
+    Frontend->>Frontend: Save tokens
+```
+
+The callback page is
+[`frontend/app/auth/google/callback/page.tsx`](../frontend/app/auth/google/callback/page.tsx).
+It reads `accessToken` and `refreshToken` from the callback URL, stores them in
+`localStorage`, and redirects to the login page.
+
+### 5.4 Refresh tokens
+
+The refresh endpoint is `POST /auth/refresh`.
+
+The backend:
+
+1. verifies the refresh JWT using `REFRESH_TOKEN_SECRET`;
+2. loads the user from the token subject;
+3. compares the supplied token with the stored bcrypt hash;
+4. creates a new access token and refresh token;
+5. replaces the stored refresh-token hash.
+
+The refresh token is therefore rotated when it is successfully used.
+
+### 5.5 Logout
+
+The logout endpoint is `POST /auth/logout`.
+
+The backend verifies the refresh token, finds the user, and sets the stored
+`refreshedToken` value to `null`. Future refresh attempts with that token then
+fail.
+
+## 6. Current API endpoints
+
+All routes are currently exposed under the backend origin:
+`http://localhost:3001`.
+
+| Method | Endpoint | Current purpose | Current protection |
+| --- | --- | --- | --- |
+| `POST` | `/auth/register` | Register with email and password | Public |
+| `POST` | `/auth/login` | Login with email and password | Public |
+| `GET` | `/auth/google` | Start Google OAuth | Public |
+| `GET` | `/auth/google/callback` | Complete Google OAuth | Passport |
+| `POST` | `/auth/refresh` | Rotate JWT tokens | Token required |
+| `POST` | `/auth/logout` | Invalidate refresh token | Token required |
+| `GET` | `/auth/list` | List user IDs and emails | Currently public |
+| `GET` | `/auth/:id` | Read a user ID and email | Currently public |
+| `PATCH` | `/auth/:id` | Update user fields | Currently public |
+| `DELETE` | `/auth/:id` | Delete a user | Currently public |
+
+Swagger documentation is available at:
+`http://localhost:3001/docs`.
+
+## 7. Database model
+
+The current schema is defined in
+[`backend/prisma/schema.prisma`](../backend/prisma/schema.prisma).
+
+```mermaid
+erDiagram
+    USER ||--o{ INTEREST : has
+    USER ||--o| PROFILE : owns
+    USER ||--o{ FRIEND : sends
+    USER ||--o{ POST : writes
+    USER ||--o{ COMMENT : writes
+    USER ||--o{ LIKE : creates
+    USER ||--o{ SLOT : hosts
+    USER ||--o{ SLOT_PARTICIPANT : joins
+    USER ||--o{ MESSAGE : sends
+    USER ||--o{ GROUP_CHAT_PARTICIPANT : joins
+    SLOT ||--o{ SLOT_PARTICIPANT : contains
+    SLOT ||--o| GROUP_CHAT : creates
+    GROUP_CHAT ||--o{ MESSAGE : contains
+    GROUP_CHAT ||--o{ GROUP_CHAT_PARTICIPANT : contains
+    POST ||--o{ COMMENT : has
+    POST ||--o{ LIKE : has
+
+    USER {
+        uuid id PK
+        string username UK
+        string email UK
+        string password
+        string googleId UK
+        enum role
+        string refreshedToken
+    }
+    INTEREST {
+        uuid id PK
+        string name UK
+    }
+    PROFILE {
+        uuid id PK
+        uuid userId UK
+    }
+    FRIEND {
+        uuid id PK
+        uuid userId
+        uuid friendId
+        enum status
+    }
+    SLOT {
+        uuid id PK
+        uuid hostId
+        string title
+        string location
+        int capacityTarget
+        enum status
+    }
+```
+
+### User fields
+
+- identity: `id`, `username`, `email`;
+- profile: `bio`, `avatarUrl`, `latitude`, `longitude`;
+- authentication: `password`, `googleId`, `refreshedToken`;
+- authorization: `role`;
+- timestamps: `createdAt`, `updatedAt`.
+
+The available roles are `USER` and `ADMIN`. The roles exist in the schema, but
+role-based authorization has not yet been wired into the controller.
+
+## 8. Frontend work completed
+
+The authentication interface is split into reusable components:
+
+```text
+frontend/
+├── app/auth/login/page.tsx
+├── app/auth/signup/page.tsx
+├── app/auth/google/callback/page.tsx
+├── components/auth/
+│   ├── google-button.tsx
+│   ├── input.tsx
+│   ├── password-input.tsx
+│   └── primary-button.tsx
+├── components/login/
+│   ├── left_panel.tsx
+│   ├── login.tsx
+│   ├── login_card.tsx
+│   └── signup_prompt.tsx
+└── components/signup/
+    ├── interest-picker.tsx
+    ├── signup-fields.tsx
+    ├── signup_card.tsx
+    └── signup.tsx
+```
+
+The signup interface already provides:
+
+- username, email, and password fields;
+- interest selection;
+- Google signup;
+- backend error display;
+- success display after registration.
+
+The login interface already provides:
+
+- email and password fields;
+- Google login;
+- links toward signup and legal pages.
+
+## 9. Configuration and local development
+
+The backend expects environment variables similar to:
 
 ```env
 DATABASE_URL=postgresql://ali:555@localhost:5432/trans_db
@@ -118,76 +408,161 @@ GOOGLE_CALLBACK_URL=http://localhost:3001/auth/google/callback
 FRONTEND_URL=http://localhost:3000
 ```
 
-Do not commit real secrets. The frontend currently uses `http://localhost:3001` directly for auth requests and Google login.
+Never commit real secrets.
 
-## Running locally
-
-Install dependencies once:
+### Start the database
 
 ```bash
-npm --prefix backend install
-npm --prefix frontend install
+docker compose up -d db adminer
 ```
 
-Start PostgreSQL and Adminer:
+PostgreSQL is available on port `5432`. Adminer is available at
+`http://localhost:8080`.
+
+### Install dependencies
 
 ```bash
-make db-up
+./scripts/install.sh
 ```
 
-Generate Prisma Client, validate the schema, and apply a development migration when needed:
+This script installs the locked backend and frontend dependencies, including
+the existing NestJS, Passport, Google OAuth, JWT, bcrypt, Prisma, and frontend
+packages. It then generates and validates Prisma Client. Future modules such
+as profile or additional authentication features can be added to the normal
+package manifests and installed by running the same script again.
+
+### Prepare Prisma
 
 ```bash
 cd backend
 npm run prisma:generate
 npm run prisma:validate
 npm run prisma:migrate
-cd ..
 ```
 
-Run the full development stack:
+### Start the applications
+
+In separate terminals:
 
 ```bash
-make dev
+cd backend
+npm run start:dev
 ```
-
-Or start services separately:
 
 ```bash
-make backend-dev   # http://localhost:3001
-make frontend-dev  # Next.js default: http://localhost:3000
+cd frontend
+npm run dev
 ```
 
-Useful checks:
+Then open:
 
-```bash
-make backend-check
-make frontend-check
-make test
-make lint
-make build
-```
+- frontend: `http://localhost:3000`;
+- backend Swagger: `http://localhost:3001/docs`;
+- Adminer: `http://localhost:8080`.
 
-## Implemented versus remaining
+## 10. Current progress assessment
 
-### Implemented
+| Area | Status | Explanation |
+| --- | --- | --- |
+| Frontend auth screens | Mostly complete | Login, signup, OAuth button, and callback exist |
+| Registration API | Implemented | DTO validation, bcrypt hashing, interests |
+| Email login API | Implemented | Password verification and JWT creation |
+| Google OAuth | Implemented foundation | Strategy and callback exist |
+| Refresh/logout | Implemented foundation | Hashed refresh tokens and invalidation exist |
+| Database schema | Broad foundation | User, social, activity, and chat models exist |
+| API documentation | Available | Swagger is configured |
+| Protected routes | Not complete | CRUD endpoints are still public |
+| Roles and permissions | Not complete | `USER` and `ADMIN` exist only in the schema |
+| Authenticated frontend pages | Not complete | No finished dashboard/session guard is present |
+| Automated auth tests | Not complete | Registration, login, refresh, logout, and OAuth need coverage |
 
-- Registration with DTO validation and bcrypt password hashing.
-- Email/password login with password verification.
-- Google OAuth login and automatic user creation/linking.
-- JWT access and refresh token creation.
-- Hashed refresh-token persistence, refresh, and logout invalidation.
-- Frontend login and signup requests to the backend.
-- Token storage in the browser after email or Google authentication.
-- User CRUD service methods and Prisma relations for future features.
-- Swagger API documentation and PostgreSQL Docker setup.
+The project is therefore ready for the next authentication hardening phase,
+but authentication should be completed before exposing social and messaging
+features.
 
-### Remaining work
+## 11. Known issues to resolve
 
-- Add JWT authentication guards to protected routes.
-- Add authorization rules for `USER` and `ADMIN` roles.
-- Move frontend API URLs to environment configuration.
-- Replace `localStorage` token storage with a production-safe cookie strategy where appropriate.
-- Add user-facing login success/error states and redirect after successful email login.
-- Add integration/e2e tests for registration, login, refresh, logout, and Google account linking.
-- Avoid returning or exposing user-management CRUD operations without authorization.
+These are important implementation details to fix next:
+
+1. The login request in
+   [`frontend/components/login/login_card.tsx`](../frontend/components/login/login_card.tsx)
+   currently uses port `3000`, but the backend runs on port `3001`.
+2. The login submit handler is attached to the button instead of the form.
+   The form should own `onSubmit`, and the button should use
+   `type="submit"`.
+3. Google user creation in
+   [`backend/src/auth/auth.service.ts`](../backend/src/auth/auth.service.ts)
+   uses `intrests`, while the Prisma relation is named `interests`.
+4. Access-token guards are not yet implemented for user CRUD routes.
+5. The frontend uses hard-coded backend URLs instead of a frontend environment
+   variable.
+6. Tokens are stored in `localStorage`. This is acceptable for an early
+   development prototype, but HTTP-only secure cookies are safer for
+   production.
+7. The OAuth callback places tokens in the URL query string. A production
+   implementation should avoid exposing long-lived credentials in URLs.
+
+## 12. Recommended next implementation plan
+
+### Phase 1: Make the current flow reliable
+
+1. Fix the login URL and form submission.
+2. Fix the Google `interests` relation name.
+3. Add visible login error and success states.
+4. Redirect successful login to a real home/dashboard page.
+5. Move the API URL to a frontend environment variable.
+
+### Phase 2: Protect the backend
+
+1. Add a JWT strategy for access tokens.
+2. Add an access-token guard.
+3. Add a request user type/decorator.
+4. Protect `/auth/list`, `/auth/:id`, `PATCH`, and `DELETE`.
+5. Restrict users to their own records.
+6. Add an admin guard for administrator-only operations.
+
+### Phase 3: Complete the frontend session
+
+1. Create an authentication utility for token access.
+2. Add automatic access-token refresh on `401` responses.
+3. Add logout that clears local session data.
+4. Add protected-page handling.
+5. Add a user profile/dashboard page.
+
+### Phase 4: Harden production security
+
+1. Move refresh tokens to secure, HTTP-only cookies.
+2. Configure strict CORS instead of `origin: '*'`.
+3. Validate and rotate secrets through deployment configuration.
+4. Avoid passing tokens in OAuth query parameters.
+5. Add rate limiting and account lockout considerations.
+6. Add audit logging for important authentication events.
+
+### Phase 5: Add tests
+
+The minimum useful authentication test matrix is:
+
+| Test | Expected result |
+| --- | --- |
+| Valid registration | User is created without returning password |
+| Duplicate email | Request is rejected |
+| Invalid registration DTO | Validation error is returned |
+| Valid login | Access and refresh tokens are returned |
+| Wrong password | Authentication fails |
+| Invalid refresh token | Refresh fails |
+| Successful refresh | Tokens rotate |
+| Logout | Stored refresh token is invalidated |
+| Google existing email | Account is linked safely |
+| Protected route without token | Request is rejected |
+| User accessing another user | Request is rejected |
+| Admin operation | Only an admin can perform it |
+
+## 13. Short conclusion
+
+The project already contains the important first layer of WeMeet:
+architecture, database models, authentication APIs, OAuth integration, and
+frontend authentication screens. The next major milestone is not adding more
+screens; it is making the existing authentication secure and complete:
+
+> fix the current login/OAuth issues, protect the backend routes, create a
+> real authenticated frontend session, and add tests.

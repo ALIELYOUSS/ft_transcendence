@@ -7,7 +7,7 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: ali
+      POSTGRES_USER: user
       POSTGRES_PASSWORD: 555
       POSTGRES_DB: trans_db
     healthcheck:
