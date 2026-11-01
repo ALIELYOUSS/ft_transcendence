@@ -5,7 +5,7 @@ import { BotModule } from './bot/bot.module.js';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module.js';
-import { ChatModule } from './chat/chat.module';
+import { ChatModule } from './chat/chat.module.js';
 
 
 @Module({

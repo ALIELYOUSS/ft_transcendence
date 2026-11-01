@@ -114,10 +114,10 @@ export class ChatService {
         });
     }
 
-    async SendMessage(sendMessage: SendMessageDto, userId: string){
+    async sendMessage(sendMessage: SendMessageDto, userId: string, chatId: string){
 
         const chat = await this.prisma.groupChat.findUnique({
-            where: { id: sendMessage.chatId },
+            where: { id: chatId },
         });
 
         if (!chat)
