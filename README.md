@@ -54,14 +54,14 @@ flowchart LR
 
 ### Main responsibilities
 
-| Layer         | Location                                                          | Responsibility                                    |
-| ------------- | ----------------------------------------------------------------- | ------------------------------------------------- |
-| Frontend      | [`frontend/`](../frontend/)                                       | Pages, forms, API requests, token storage         |
-| Backend       | [`backend/src/`](../backend/src/)                                 | API routes, validation, authentication, OAuth     |
-| Database      | [`backend/prisma/schema.prisma`](../backend/prisma/schema.prisma) | Users and application data                        |
-| Reverse proxy | [`nginx/default.conf`](nginx/default.conf)                        | HTTPS termination and routing                     |
-| Runtime       | [`docker-compose.yml`](docker-compose.yml)                        | Nginx, frontend, backend, PostgreSQL, and Adminer |
-| Documentation | [`README.md`](../README.md)                                       | Quick project overview and setup                  |
+| Layer         | Location                                                       | Responsibility                                    |
+| ------------- | -------------------------------------------------------------- | ------------------------------------------------- |
+| Frontend      | [`frontend/`](frontend/)                                       | Pages, forms, API requests, and session handling  |
+| Backend       | [`backend/src/`](backend/src/)                                 | API routes, validation, authentication, OAuth     |
+| Database      | [`backend/prisma/schema.prisma`](backend/prisma/schema.prisma) | Users and application data                        |
+| Reverse proxy | [`nginx/default.conf`](nginx/default.conf)                     | HTTPS termination and routing                     |
+| Runtime       | [`docker-compose.yml`](docker-compose.yml)                     | Nginx, frontend, backend, PostgreSQL, and Adminer |
+| Documentation | [`README.md`](README.md)                                       | Quick project overview and setup                  |
 
 ## 3. Technology stack
 
@@ -74,7 +74,7 @@ flowchart LR
 - Next.js App Router
 
 The frontend contains authentication routes under
-[`frontend/app/auth/`](../frontend/app/auth/):
+[`frontend/app/auth/`](frontend/app/auth/):
 
 - `/auth/login`
 - `/auth/signup`
@@ -88,7 +88,7 @@ The frontend contains authentication routes under
 - Swagger
 
 The backend starts on port `3001` by default. The bootstrap configuration is
-in [`backend/src/main.ts`](../backend/src/main.ts).
+in [`backend/src/main.ts`](backend/src/main.ts).
 
 ### Database
 
@@ -97,8 +97,8 @@ in [`backend/src/main.ts`](../backend/src/main.ts).
 - Adminer for browser-based database inspection
 
 The database container is configured in
-[`docker-compose.yml`](../docker-compose.yml). Prisma migrations are stored
-under [`backend/prisma/migrations/`](../backend/prisma/migrations/).
+[`docker-compose.yml`](docker-compose.yml). Prisma migrations are stored
+under [`backend/prisma/migrations/`](backend/prisma/migrations/).
 
 ## 4. Backend structure
 
@@ -128,7 +128,7 @@ flowchart TD
 
 ### Application bootstrap
 
-[`backend/src/main.ts`](../backend/src/main.ts) performs the following work:
+[`backend/src/main.ts`](backend/src/main.ts) performs the following work:
 
 1. Creates the NestJS application.
 2. Enables Swagger at `/docs`.
@@ -138,7 +138,7 @@ flowchart TD
 
 ### Authentication module
 
-[`backend/src/auth/auth.module.ts`](../backend/src/auth/auth.module.ts)
+[`backend/src/auth/auth.module.ts`](backend/src/auth/auth.module.ts)
 registers:
 
 - `AuthController`;
@@ -148,7 +148,7 @@ registers:
 - `PrismaModule`.
 
 Google configuration is loaded by
-[`backend/src/auth/google-oauth.config.ts`](../backend/src/auth/google-oauth.config.ts).
+[`backend/src/auth/google-oauth.config.ts`](backend/src/auth/google-oauth.config.ts).
 
 The authentication request path is:
 
@@ -185,7 +185,7 @@ flowchart TD
     Database["PrismaService<br/>reads or writes PostgreSQL"]
     Tokens["Create or rotate JWT tokens<br/>hash refresh token in database"]
     Response["NestJS returns JSON or redirects<br/>to /auth/google/callback"]
-    Frontend["Next.js receives the response<br/>stores tokens or shows the result"]
+    Frontend["Next.js receives the response<br/>session handling is incomplete"]
     Google["Google OAuth consent<br/>and callback"]
 
     Start --> HTTPS
@@ -207,7 +207,7 @@ flowchart TD
 ### 5.1 Email registration
 
 The registration form is implemented in
-[`frontend/components/signup/signup_card.tsx`](../frontend/components/signup/signup_card.tsx).
+[`frontend/components/signup/signup_card.tsx`](frontend/components/signup/signup_card.tsx).
 It sends a request to `POST /auth/register` containing:
 
 ```json
@@ -220,7 +220,7 @@ It sends a request to `POST /auth/register` containing:
 ```
 
 The backend validates the request with
-[`create-auth.dto.ts`](../backend/src/auth/dto/create-auth.dto.ts):
+[`create-auth.dto.ts`](backend/src/auth/dto/create-auth.dto.ts):
 
 - `username` must be a non-empty string;
 - `email` must be a valid email;
@@ -256,9 +256,9 @@ sequenceDiagram
 ### 5.2 Email login
 
 The login UI is in
-[`frontend/components/login/login_card.tsx`](../frontend/components/login/login_card.tsx).
+[`frontend/components/login/login_card.tsx`](frontend/components/login/login_card.tsx).
 The backend login logic is in
-[`backend/src/auth/auth.service.ts`](../backend/src/auth/auth.service.ts).
+[`backend/src/auth/auth.service.ts`](backend/src/auth/auth.service.ts).
 
 The intended flow is:
 
@@ -267,7 +267,8 @@ The intended flow is:
 3. bcrypt compares the submitted password with the stored hash;
 4. backend creates an access token and refresh token;
 5. backend stores a bcrypt hash of the refresh token;
-6. frontend stores the returned tokens.
+6. the backend returns the tokens, but the email login UI does not yet create a
+   usable frontend session from that response.
 
 The access token expires after 15 minutes. The refresh token expires after
 7 days.
@@ -275,7 +276,7 @@ The access token expires after 15 minutes. The refresh token expires after
 ### 5.3 Google OAuth
 
 The Google button is implemented in
-[`frontend/components/auth/google-button.tsx`](../frontend/components/auth/google-button.tsx).
+[`frontend/components/auth/google-button.tsx`](frontend/components/auth/google-button.tsx).
 It starts the flow with `GET /auth/google`.
 
 ```mermaid
@@ -303,7 +304,7 @@ sequenceDiagram
 ```
 
 The callback page is
-[`frontend/app/auth/google/callback/page.tsx`](../frontend/app/auth/google/callback/page.tsx).
+[`frontend/app/auth/google/callback/page.tsx`](frontend/app/auth/google/callback/page.tsx).
 It reads `accessToken` and `refreshToken` from the callback URL, stores them in
 `localStorage`, and redirects to the login page.
 
@@ -331,9 +332,10 @@ fail.
 
 ## 6. Current API endpoints
 
-Through the reverse proxy, browser requests use the HTTPS origin and `/api`
-prefix, for example `https://localhost/api/auth/login`. Nginx removes `/api`
-before forwarding the request to the backend.
+Through the supported Docker workflow, browser requests use the HTTPS origin
+and `/api` prefix, for example `https://localhost/api/auth/login`. Nginx
+removes `/api` before forwarding the request to the backend. Direct backend
+requests use `http://localhost:3001/auth/...` and bypass Nginx.
 
 | Method   | Endpoint                | Current purpose                  | Current protection |
 | -------- | ----------------------- | -------------------------------- | ------------------ |
@@ -348,13 +350,13 @@ before forwarding the request to the backend.
 | `PATCH`  | `/auth/:id`             | Update user fields               | Currently public   |
 | `DELETE` | `/auth/:id`             | Delete a user                    | Currently public   |
 
-Swagger documentation is available directly at `http://localhost:3001/docs`,
-or through the proxy at `https://localhost/api/docs`.
+Swagger documentation is available directly at `http://localhost:3001/docs`.
+It is not currently routed by Nginx at `https://localhost/api/docs`.
 
 ## 7. Database model
 
 The current schema is defined in
-[`backend/prisma/schema.prisma`](../backend/prisma/schema.prisma).
+[`backend/prisma/schema.prisma`](backend/prisma/schema.prisma).
 
 ```mermaid
 erDiagram
@@ -445,7 +447,7 @@ frontend/
     └── signup.tsx
 ```
 
-The signup interface already provides:
+The signup interface currently provides:
 
 - username, email, and password fields;
 - interest selection;
@@ -453,7 +455,7 @@ The signup interface already provides:
 - backend error display;
 - success display after registration.
 
-The login interface already provides:
+The login interface currently provides:
 
 - email and password fields;
 - Google login;
@@ -469,8 +471,8 @@ ACCESS_TOKEN_SECRET=replace-with-a-long-secret
 REFRESH_TOKEN_SECRET=replace-with-a-long-secret
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
-GOOGLE_CALLBACK_URL=http://localhost:3001/auth/google/callback
-FRONTEND_URL=http://localhost:3000
+GOOGLE_CALLBACK_URL=https://localhost/api/auth/google/callback
+FRONTEND_URL=https://localhost
 ```
 
 Never commit real secrets.
@@ -505,7 +507,24 @@ npm run prisma:validate
 npm run prisma:migrate
 ```
 
-### Start the applications
+### Start the supported local workflow
+
+The supported browser workflow is Docker Compose with Nginx in front of the
+frontend and backend:
+
+```bash
+docker compose up --build
+```
+
+Then open `https://localhost`. Because the local certificate is self-signed,
+the browser will display a development certificate warning.
+
+### Start the applications directly
+
+The direct workflow is useful for backend development, but it does not provide
+the Nginx `/api` proxy. Frontend requests to `/api/auth/*` therefore require a
+Next.js rewrite or a matching API base URL before this workflow can support
+browser authentication end to end.
 
 In separate terminals:
 
@@ -529,13 +548,13 @@ Then open:
 
 | Area                         | Status                 | Explanation                                                   |
 | ---------------------------- | ---------------------- | ------------------------------------------------------------- |
-| Frontend auth screens        | Mostly complete        | Login, signup, OAuth button, and callback exist               |
+| Frontend auth screens        | Partially complete     | Login, signup, OAuth button, and callback exist               |
 | Registration API             | Implemented            | DTO validation, bcrypt hashing, interests                     |
 | Email login API              | Implemented            | Password verification and JWT creation                        |
 | Google OAuth                 | Implemented foundation | Strategy and callback exist                                   |
 | Refresh/logout               | Implemented foundation | Hashed refresh tokens and invalidation exist                  |
 | Database schema              | Broad foundation       | User, social, activity, and chat models exist                 |
-| API documentation            | Available              | Swagger is configured                                         |
+| API documentation            | Available directly     | Swagger is available on the backend, but not proxied by Nginx |
 | Protected routes             | Not complete           | CRUD endpoints are still public                               |
 | Roles and permissions        | Not complete           | `USER` and `ADMIN` exist only in the schema                   |
 | Authenticated frontend pages | Not complete           | No finished dashboard/session guard is present                |
@@ -545,82 +564,82 @@ The project is therefore ready for the next authentication hardening phase,
 but authentication should be completed before exposing social and messaging
 features.
 
-## 11. Known issues to resolve
+## 11. Existing problems
 
-These are important implementation details to fix next:
+The following issues are present in the current implementation and should be
+resolved before social, activity, or chat features are exposed:
 
-1. The login request in
-   [`frontend/components/login/login_card.tsx`](../frontend/components/login/login_card.tsx)
-   currently uses port `3000`, but the backend runs on port `3001`.
-2. The login submit handler is attached to the button instead of the form.
-   The form should own `onSubmit`, and the button should use
-   `type="submit"`.
-3. Google user creation in
-   [`backend/src/auth/auth.service.ts`](../backend/src/auth/auth.service.ts)
-   uses `intrests`, while the Prisma relation is named `interests`.
-4. Access-token guards are not yet implemented for user CRUD routes.
-5. The frontend uses hard-coded backend URLs instead of a frontend environment
-   variable.
-6. Tokens are stored in `localStorage`. This is acceptable for an early
-   development prototype, but HTTP-only secure cookies are safer for
-   production.
-7. The OAuth callback places tokens in the URL query string. A production
-   implementation should avoid exposing long-lived credentials in URLs.
+1. The email login UI sends the request but does not process the response,
+   store a usable session, show an error, or redirect after success.
+2. The Google callback places access and refresh tokens in the URL and in
+   `localStorage`, exposing credentials to browser history and JavaScript.
+3. Refresh and logout require a JSON refresh token even though the backend also
+   creates a cookie. Cookie parsing is not enabled consistently.
+4. User CRUD routes are public. There is no JWT access-token guard, ownership
+   check, or admin authorization, and the update DTO permits fields that should
+   not be generally editable.
+5. CORS is configured with `origin: '*'` and credentials enabled, which is not
+   a valid credentialed browser configuration.
+6. The direct `npm run dev` workflow has no `/api` rewrite, while the frontend
+   uses relative `/api/auth/*` requests. Docker/Nginx is currently the only
+   documented end-to-end browser workflow.
+7. Nginx does not proxy Swagger, and Compose exposes the backend and frontend
+   ports directly in addition to the public Nginx ports.
+8. Database credentials and application secrets are configured in development
+   files. They must be externalized, and any exposed credentials must be
+   rotated before deployment.
+9. Backend startup does not automatically run Prisma migrations. Migration
+   execution must remain an explicit, documented deployment step.
+10. Authentication has no complete automated test coverage for login, OAuth,
+    refresh rotation, logout, protected routes, ownership, or roles.
 
-## 12. next implementation plan
+## 12. Next implementation plan
 
-### Phase 1: Make the current flow reliable
+### Phase 1: Complete the existing authentication flow
 
-1. Fix the login URL and form submission.
-2. Fix the Google `interests` relation name.
-3. Add visible login error and success states.
-4. Redirect successful login to a real home/dashboard page.
-5. Move the API URL to a frontend environment variable.
+1. Handle login responses, errors, loading state, and successful redirect.
+2. Add a shared frontend API/session utility and a protected page guard.
+3. Use HTTP-only, `Secure`, `SameSite` refresh cookies and remove refresh
+   tokens from URLs and `localStorage`.
+4. Update refresh and logout to read and clear the cookie consistently.
+5. Verify the Google redirect URI and test existing-user linking and new-user
+   creation.
 
 ### Phase 2: Protect the backend
 
-1. Add a JWT strategy for access tokens.
-2. Add an access-token guard.
-3. Add a request user type/decorator.
-4. Protect `/auth/list`, `/auth/:id`, `PATCH`, and `DELETE`.
-5. Restrict users to their own records.
-6. Add an admin guard for administrator-only operations.
+1. Add a JWT strategy, access-token guard, and current-user decorator.
+2. Protect all user CRUD routes and enforce ownership checks.
+3. Replace the general update DTO with a whitelist of editable fields.
+4. Add roles metadata and an admin guard for administrator-only operations.
+5. Configure CORS for the actual frontend origin and credential policy.
 
-### Phase 3: Complete the frontend session
+### Phase 3: Make the development and deployment workflows reliable
+
+1. Add a documented Next.js `/api` rewrite, or explicitly support only the
+   Docker/Nginx workflow for browser authentication.
+2. Add frontend and backend healthchecks and make Nginx wait for healthy
+   services.
+3. Externalize database credentials and secrets through `.env.example` files.
+4. Decide whether Swagger should be proxied and configure the route if it is.
+5. Remove direct frontend/backend ports from production and document Prisma
+   migration, rollback, and shutdown procedures.
+
+### Phase 4: Add tests before feature expansion
+
+1. Cover registration, duplicate users, login, wrong passwords, refresh
+   rotation, logout, and Google account linking.
+2. Cover unauthenticated access, ownership violations, and admin permissions.
+3. Add frontend tests for login, logout, OAuth callback, and protected pages.
+4. Add CI checks for linting, typechecking, tests, Docker builds, and Compose
+   configuration.
+
+### Phase 5: Build the product features
 
 1. Create an authentication utility for token access.
 2. Add automatic access-token refresh on `401` responses.
 3. Add logout that clears local session data.
 4. Add protected-page handling.
 5. Add a user profile/dashboard page.
-
-### Phase 4: Harden production security
-
-1. Move refresh tokens to secure, HTTP-only cookies.
-2. Configure strict CORS instead of `origin: '*'`.
-3. Validate and rotate secrets through deployment configuration.
-4. Avoid passing tokens in OAuth query parameters.
-5. Add rate limiting and account lockout considerations.
-6. Add audit logging for important authentication events.
-
-### Phase 5: Add tests
-
-The minimum useful authentication test matrix is:
-
-| Test                          | Expected result                            |
-| ----------------------------- | ------------------------------------------ |
-| Valid registration            | User is created without returning password |
-| Duplicate email               | Request is rejected                        |
-| Invalid registration DTO      | Validation error is returned               |
-| Valid login                   | Access and refresh tokens are returned     |
-| Wrong password                | Authentication fails                       |
-| Invalid refresh token         | Refresh fails                              |
-| Successful refresh            | Tokens rotate                              |
-| Logout                        | Stored refresh token is invalidated        |
-| Google existing email         | Account is linked safely                   |
-| Protected route without token | Request is rejected                        |
-| User accessing another user   | Request is rejected                        |
-| Admin operation               | Only an admin can perform it               |
 
 ## 13. Short conclusion
 
