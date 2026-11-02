@@ -53,7 +53,7 @@ export class AuthService {
       });
     }
 
-    const tokens = await this.createTokens(user.id, user.email);
+    const tokens = await this.createTokens(user.id);
     const { password: _, refreshedToken: __, ...response } = user;
 
     return { response, ...tokens };
@@ -73,14 +73,14 @@ export class AuthService {
       throw new ConflictException('Invalid email or password');
     }
 
-    const { accessToken, refreshToken } = await this.createTokens(user.id, user.email);
+    const { accessToken, refreshToken } = await this.createTokens(user.id);
 
     const { password: _, ...response } = user;
     return { response, accessToken, refreshToken };
   }
 
-  private async createTokens(userId: string, email: string) {
-    const jwtPayload = { sub: userId, email };
+  private async createTokens(userId: string) {
+    const jwtPayload = { sub: userId };
     const accessToken = Jwt.sign(jwtPayload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
     const refreshToken = Jwt.sign(jwtPayload, process.env.REFRESH_TOKEN_SECRET, {
       expiresIn: '7d',
@@ -121,7 +121,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const tokens = await this.createTokens(user.id, user.email);
+    const tokens = await this.createTokens(user.id);
     return tokens;
   }
 
