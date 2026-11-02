@@ -11,18 +11,64 @@ services:
       POSTGRES_PASSWORD: 555
       POSTGRES_DB: trans_db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ali -d trans_db"]
+      test: ["CMD-SHELL", "pg_isready -U user -d trans_db"]
       interval: 5s
       timeout: 5s
       retries: 10
     networks:
       - bridge
-    
+
   adminer:
     image: adminer:4
     restart: always
     ports:
       - "8080:8080"
+    networks:
+      - bridge
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgresql://user:555@db:5432/trans_db
+      FRONTEND_URL: https://localhost
+    env_file:
+      - ./backend/.env
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - bridge
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - bridge
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - frontend
+      - backend
     networks:
       - bridge
 

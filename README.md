@@ -18,34 +18,50 @@ The project is currently at the stage where the authentication foundation is
 mostly present, but protected application pages and authorization still need
 to be completed before the rest of the platform can safely use user data.
 
+### Current progress for teammates
+
+The authentication foundation is implemented. Users can register with an
+email, log in with a password, use Google OAuth, refresh their JWT tokens, and
+log out. Passwords are hashed with bcrypt, refresh tokens are stored as hashes
+in the database, and Prisma connects the NestJS API to PostgreSQL.
+
+The project now runs through Docker Compose. Nginx is the public entry point:
+it serves HTTPS, sends `/api/*` requests to NestJS, and sends all other
+requests to Next.js. The local certificate is self-signed and is intended for
+development only.
+
 ## 2. Overall architecture
 
 ```mermaid
 flowchart LR
-    Browser["Browser<br/>Next.js :3000"]
+    Browser["Browser<br/>https://localhost"]
+    Nginx["Nginx reverse proxy<br/>:80 / :443"]
+    Frontend["Next.js frontend<br/>:3000"]
     API["NestJS API<br/>:3001"]
     DB[("PostgreSQL<br/>:5432")]
     Adminer["Adminer<br/>:8080"]
     Google["Google OAuth"]
 
-    Browser -->|"HTTP / JSON"| API
-    Browser -->|"OAuth start"| API
+    Browser -->|"HTTPS pages"| Nginx
+    Nginx -->|"Browser pages"| Frontend
+    Nginx -->|"/api/*"| API
     API -->|"Prisma"| DB
     Adminer --> DB
     API -->|"OAuth redirect"| Google
     Google -->|"OAuth callback"| API
-    API -->|"Redirect with tokens"| Browser
+    API -->|"Redirect to frontend"| Nginx
 ```
 
 ### Main responsibilities
 
-| Layer | Location | Responsibility |
-| --- | --- | --- |
-| Frontend | [`frontend/`](../frontend/) | Pages, forms, user interaction, token storage |
-| Backend | [`backend/src/`](../backend/src/) | API routes, validation, authentication, OAuth |
-| Database | [`backend/prisma/schema.prisma`](../backend/prisma/schema.prisma) | Users and application data |
-| Database runtime | [`docker-compose.yml`](../docker-compose.yml) | PostgreSQL and Adminer containers |
-| Documentation | [`README.md`](../README.md) | Quick project overview and setup |
+| Layer         | Location                                                          | Responsibility                                    |
+| ------------- | ----------------------------------------------------------------- | ------------------------------------------------- |
+| Frontend      | [`frontend/`](../frontend/)                                       | Pages, forms, API requests, token storage         |
+| Backend       | [`backend/src/`](../backend/src/)                                 | API routes, validation, authentication, OAuth     |
+| Database      | [`backend/prisma/schema.prisma`](../backend/prisma/schema.prisma) | Users and application data                        |
+| Reverse proxy | [`nginx/default.conf`](nginx/default.conf)                        | HTTPS termination and routing                     |
+| Runtime       | [`docker-compose.yml`](docker-compose.yml)                        | Nginx, frontend, backend, PostgreSQL, and Adminer |
+| Documentation | [`README.md`](../README.md)                                       | Quick project overview and setup                  |
 
 ## 3. Technology stack
 
@@ -66,10 +82,6 @@ The frontend contains authentication routes under
 
 ### Backend
 
-- NestJS `12`
-- TypeScript
-- Passport
-- Passport Google OAuth 2.0
 - JSON Web Tokens
 - bcrypt
 - class-validator
@@ -137,6 +149,58 @@ registers:
 
 Google configuration is loaded by
 [`backend/src/auth/google-oauth.config.ts`](../backend/src/auth/google-oauth.config.ts).
+
+The authentication request path is:
+
+```mermaid
+flowchart LR
+    Form["Login or signup form"] -->|"/api/auth/*"| Proxy["Nginx"]
+    Proxy -->|"/auth/*"| Controller["AuthController"]
+    Controller --> Service["AuthService"]
+    Service --> Hash["bcrypt / JWT"]
+    Service --> Prisma["PrismaService"]
+    Prisma --> DB[("PostgreSQL")]
+    Google["Google OAuth"] --> Strategy["GoogleStrategy"]
+    Strategy --> Service
+```
+
+The `/api` prefix belongs to the public proxy URL. Nginx removes that prefix
+before forwarding the request, so NestJS continues to handle routes such as
+`/auth/login` and `/auth/google/callback`.
+
+### Request lifecycle: top to bottom
+
+The following graph shows what happens to an authentication request from the
+browser until the response returns to the user:
+
+```mermaid
+flowchart TD
+    Start["User submits login/signup<br/>or clicks Google login"]
+    HTTPS["Browser sends HTTPS request<br/>https://localhost/api/auth/..."]
+    Proxy["Nginx :443<br/>terminates TLS"]
+    Rewrite["Nginx rewrites the path<br/>/api/auth/login -> /auth/login"]
+    Controller["NestJS AuthController<br/>matches the route"]
+    Validate["Validation and authentication<br/>DTO checks, bcrypt, or GoogleStrategy"]
+    Service["AuthService<br/>login, registration, or OAuth account linking"]
+    Database["PrismaService<br/>reads or writes PostgreSQL"]
+    Tokens["Create or rotate JWT tokens<br/>hash refresh token in database"]
+    Response["NestJS returns JSON or redirects<br/>to /auth/google/callback"]
+    Frontend["Next.js receives the response<br/>stores tokens or shows the result"]
+    Google["Google OAuth consent<br/>and callback"]
+
+    Start --> HTTPS
+    HTTPS --> Proxy
+    Proxy --> Rewrite
+    Rewrite --> Controller
+    Controller --> Validate
+    Validate --> Service
+    Service --> Database
+    Database --> Tokens
+    Tokens --> Response
+    Response --> Frontend
+    Validate -. "Google login branch" .-> Google
+    Google --> Service
+```
 
 ## 5. Authentication implementation
 
@@ -267,24 +331,25 @@ fail.
 
 ## 6. Current API endpoints
 
-All routes are currently exposed under the backend origin:
-`http://localhost:3001`.
+Through the reverse proxy, browser requests use the HTTPS origin and `/api`
+prefix, for example `https://localhost/api/auth/login`. Nginx removes `/api`
+before forwarding the request to the backend.
 
-| Method | Endpoint | Current purpose | Current protection |
-| --- | --- | --- | --- |
-| `POST` | `/auth/register` | Register with email and password | Public |
-| `POST` | `/auth/login` | Login with email and password | Public |
-| `GET` | `/auth/google` | Start Google OAuth | Public |
-| `GET` | `/auth/google/callback` | Complete Google OAuth | Passport |
-| `POST` | `/auth/refresh` | Rotate JWT tokens | Token required |
-| `POST` | `/auth/logout` | Invalidate refresh token | Token required |
-| `GET` | `/auth/list` | List user IDs and emails | Currently public |
-| `GET` | `/auth/:id` | Read a user ID and email | Currently public |
-| `PATCH` | `/auth/:id` | Update user fields | Currently public |
-| `DELETE` | `/auth/:id` | Delete a user | Currently public |
+| Method   | Endpoint                | Current purpose                  | Current protection |
+| -------- | ----------------------- | -------------------------------- | ------------------ |
+| `POST`   | `/auth/register`        | Register with email and password | Public             |
+| `POST`   | `/auth/login`           | Login with email and password    | Public             |
+| `GET`    | `/auth/google`          | Start Google OAuth               | Public             |
+| `GET`    | `/auth/google/callback` | Complete Google OAuth            | Passport           |
+| `POST`   | `/auth/refresh`         | Rotate JWT tokens                | Token required     |
+| `POST`   | `/auth/logout`          | Invalidate refresh token         | Token required     |
+| `GET`    | `/auth/list`            | List user IDs and emails         | Currently public   |
+| `GET`    | `/auth/:id`             | Read a user ID and email         | Currently public   |
+| `PATCH`  | `/auth/:id`             | Update user fields               | Currently public   |
+| `DELETE` | `/auth/:id`             | Delete a user                    | Currently public   |
 
-Swagger documentation is available at:
-`http://localhost:3001/docs`.
+Swagger documentation is available directly at `http://localhost:3001/docs`,
+or through the proxy at `https://localhost/api/docs`.
 
 ## 7. Database model
 
@@ -462,19 +527,19 @@ Then open:
 
 ## 10. Current progress assessment
 
-| Area | Status | Explanation |
-| --- | --- | --- |
-| Frontend auth screens | Mostly complete | Login, signup, OAuth button, and callback exist |
-| Registration API | Implemented | DTO validation, bcrypt hashing, interests |
-| Email login API | Implemented | Password verification and JWT creation |
-| Google OAuth | Implemented foundation | Strategy and callback exist |
-| Refresh/logout | Implemented foundation | Hashed refresh tokens and invalidation exist |
-| Database schema | Broad foundation | User, social, activity, and chat models exist |
-| API documentation | Available | Swagger is configured |
-| Protected routes | Not complete | CRUD endpoints are still public |
-| Roles and permissions | Not complete | `USER` and `ADMIN` exist only in the schema |
-| Authenticated frontend pages | Not complete | No finished dashboard/session guard is present |
-| Automated auth tests | Not complete | Registration, login, refresh, logout, and OAuth need coverage |
+| Area                         | Status                 | Explanation                                                   |
+| ---------------------------- | ---------------------- | ------------------------------------------------------------- |
+| Frontend auth screens        | Mostly complete        | Login, signup, OAuth button, and callback exist               |
+| Registration API             | Implemented            | DTO validation, bcrypt hashing, interests                     |
+| Email login API              | Implemented            | Password verification and JWT creation                        |
+| Google OAuth                 | Implemented foundation | Strategy and callback exist                                   |
+| Refresh/logout               | Implemented foundation | Hashed refresh tokens and invalidation exist                  |
+| Database schema              | Broad foundation       | User, social, activity, and chat models exist                 |
+| API documentation            | Available              | Swagger is configured                                         |
+| Protected routes             | Not complete           | CRUD endpoints are still public                               |
+| Roles and permissions        | Not complete           | `USER` and `ADMIN` exist only in the schema                   |
+| Authenticated frontend pages | Not complete           | No finished dashboard/session guard is present                |
+| Automated auth tests         | Not complete           | Registration, login, refresh, logout, and OAuth need coverage |
 
 The project is therefore ready for the next authentication hardening phase,
 but authentication should be completed before exposing social and messaging
@@ -542,20 +607,20 @@ These are important implementation details to fix next:
 
 The minimum useful authentication test matrix is:
 
-| Test | Expected result |
-| --- | --- |
-| Valid registration | User is created without returning password |
-| Duplicate email | Request is rejected |
-| Invalid registration DTO | Validation error is returned |
-| Valid login | Access and refresh tokens are returned |
-| Wrong password | Authentication fails |
-| Invalid refresh token | Refresh fails |
-| Successful refresh | Tokens rotate |
-| Logout | Stored refresh token is invalidated |
-| Google existing email | Account is linked safely |
-| Protected route without token | Request is rejected |
-| User accessing another user | Request is rejected |
-| Admin operation | Only an admin can perform it |
+| Test                          | Expected result                            |
+| ----------------------------- | ------------------------------------------ |
+| Valid registration            | User is created without returning password |
+| Duplicate email               | Request is rejected                        |
+| Invalid registration DTO      | Validation error is returned               |
+| Valid login                   | Access and refresh tokens are returned     |
+| Wrong password                | Authentication fails                       |
+| Invalid refresh token         | Refresh fails                              |
+| Successful refresh            | Tokens rotate                              |
+| Logout                        | Stored refresh token is invalidated        |
+| Google existing email         | Account is linked safely                   |
+| Protected route without token | Request is rejected                        |
+| User accessing another user   | Request is rejected                        |
+| Admin operation               | Only an admin can perform it               |
 
 ## 13. Short conclusion
 
