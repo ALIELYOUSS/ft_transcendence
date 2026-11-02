@@ -567,7 +567,7 @@ These are important implementation details to fix next:
 7. The OAuth callback places tokens in the URL query string. A production
    implementation should avoid exposing long-lived credentials in URLs.
 
-## 12. Recommended next implementation plan
+## 12. next implementation plan
 
 ### Phase 1: Make the current flow reliable
 
