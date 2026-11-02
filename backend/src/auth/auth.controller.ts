@@ -23,11 +23,10 @@ export class AuthController {
 
   @Get('google')
   @UseGuards(AuthGuard('google'))
-  googleLogin() {
-  }
+  googleLogin() {}
 
   @Post('logout')
-  async logout(@Body() { refreshToken }:  RefreshTokenDto ) {
+  async logout(@Body() { refreshToken }: RefreshTokenDto) {
     return this.authService.logout(refreshToken);
   }
 
@@ -39,21 +38,29 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleCallback(@Req() request: Request, @Res() response: Response) {
-    const tokens = await this.authService.loginWithGoogle(request.user as {
-      googleId: string;
-      email?: string;
-      username?: string;
+    const tokens = await this.authService.loginWithGoogle(
+      request.user as {
+        googleId: string;
+        email?: string;
+        username?: string;
+      }
+    );
+
+    response.cookie('refreshToken', tokens.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const query = new URLSearchParams({
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-    });
+    const callbackUrl = new URL(`${frontendUrl}/auth/google/callback`);
+    callbackUrl.searchParams.set('accessToken', tokens.accessToken);
+    callbackUrl.searchParams.set('refreshToken', tokens.refreshToken);
 
-    return response.redirect(`${frontendUrl}/auth/google/callback?${query.toString()}`);
+    return response.redirect(callbackUrl.toString());
   }
-  
+
   @Post('login')
   login(@Body() credentials: { email: string; password: string }) {
     return this.authService.login(credentials.email, credentials.password);
@@ -75,7 +82,7 @@ export class AuthController {
   }
 
   @Patch(':id')
-    update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
+  update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
     return this.authService.update(id, updateAuthDto);
   }
 

@@ -24,8 +24,7 @@ let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
     }
-    googleLogin() {
-    }
+    googleLogin() { }
     async logout({ refreshToken }) {
         return this.authService.logout(refreshToken);
     }
@@ -34,12 +33,14 @@ let AuthController = class AuthController {
     }
     async googleCallback(request, response) {
         const tokens = await this.authService.loginWithGoogle(request.user);
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-        const query = new URLSearchParams({
-            accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken,
+        response.cookie('refreshToken', tokens.refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000,
         });
-        return response.redirect(`${frontendUrl}/auth/google/callback?${query.toString()}`);
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        return response.redirect(`${frontendUrl}/auth/google/callback?`);
     }
     login(credentials) {
         return this.authService.login(credentials.email, credentials.password);

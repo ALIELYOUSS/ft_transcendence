@@ -11,19 +11,25 @@ async function bootstrap() {
     .setDescription('API documentation for the wemeet platform')
     .setVersion('0.1')
     .build();
-  
+
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, swaggerDocument);
 
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-  }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+    })
+  );
 
   app.enableCors({
     origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: 'Content-Type, Accept, Authorization',
+    credentials: true,
   });
+
+  // app.use(cookieParser());
+
   await app.listen(process.env.PORT ?? 3001);
 }
 void bootstrap();

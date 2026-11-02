@@ -20,9 +20,9 @@ export declare class AuthController {
         password: string;
     }): Promise<{
         response: {
+            id: string;
             username: string;
             email: string;
-            id: string;
             googleId: string | null;
             bio: string | null;
             avatarUrl: string | null;
@@ -41,9 +41,9 @@ export declare class AuthController {
             id: string;
             name: string;
         }[];
+        id: string;
         username: string;
         email: string;
-        id: string;
         googleId: string | null;
         bio: string | null;
         avatarUrl: string | null;
@@ -55,39 +55,39 @@ export declare class AuthController {
         updatedAt: Date;
     }>;
     findAll(): import("@prisma/client").Prisma.PrismaPromise<{
-        email: string;
         id: string;
+        email: string;
     }[]>;
     findOne(id: string): import("@prisma/client").Prisma.Prisma__UserClient<{
-        email: string;
         id: string;
+        email: string;
     } | null, null, import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     update(id: string, updateAuthDto: UpdateAuthDto): import("@prisma/client").Prisma.Prisma__UserClient<{
+        id: string;
         username: string;
         email: string;
-        password: string;
-        id: string;
         googleId: string | null;
         bio: string | null;
         avatarUrl: string | null;
         latitude: number | null;
         longitude: number | null;
         role: import("@prisma/client").$Enums.UserRole;
+        password: string;
         refreshedToken: string | null;
         createdAt: Date;
         updatedAt: Date;
     }, never, import("@prisma/client/runtime/client").DefaultArgs, import("@prisma/client").Prisma.PrismaClientOptions>;
     remove(id: string): import("@prisma/client").Prisma.Prisma__UserClient<{
+        id: string;
         username: string;
         email: string;
-        password: string;
-        id: string;
         googleId: string | null;
         bio: string | null;
         avatarUrl: string | null;
         latitude: number | null;
         longitude: number | null;
         role: import("@prisma/client").$Enums.UserRole;
+        password: string;
         refreshedToken: string | null;
         createdAt: Date;
         updatedAt: Date;

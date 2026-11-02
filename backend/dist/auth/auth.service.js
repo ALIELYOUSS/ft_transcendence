@@ -81,7 +81,7 @@ let AuthService = class AuthService {
                     email: googleUser.email,
                     googleId: googleUser.googleId,
                     password: await bcrypt.hash((0, crypto_1.randomBytes)(32).toString('hex'), 10),
-                    intrests: {
+                    interests: {
                         connectOrCreate: [],
                     },
                 },
@@ -109,7 +109,9 @@ let AuthService = class AuthService {
     async createTokens(userId, email) {
         const jwtPayload = { sub: userId, email };
         const accessToken = Jwt.sign(jwtPayload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
-        const refreshToken = Jwt.sign(jwtPayload, process.env.REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
+        const refreshToken = Jwt.sign(jwtPayload, process.env.REFRESH_TOKEN_SECRET, {
+            expiresIn: '7d',
+        });
         await this.prisma.user.update({
             where: { id: userId },
             data: { refreshedToken: await bcrypt.hash(refreshToken, 10) },
@@ -152,7 +154,7 @@ let AuthService = class AuthService {
                 email,
                 password: hashPass,
                 interests: {
-                    connectOrCreate: interests.map((interestName) => ({
+                    connectOrCreate: interests.map(interestName => ({
                         where: {
                             name: interestName,
                         },
@@ -166,7 +168,7 @@ let AuthService = class AuthService {
                 interests: true,
             },
         });
-        console.log("New user created:", newUser);
+        console.log('New user created:', newUser);
         const { password: _, ...response } = newUser;
         return response;
     }

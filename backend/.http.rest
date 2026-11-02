@@ -1,0 +1,16 @@
+POST http://localhost:3001/auth/register
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "email": "test@gail.com",
+  "password": "testpassword",
+  "interests": ["coding", "reading", "gaming"]
+}
+###
+
+DELETE http://localhost:3001/auth/e54d7127-b807-4e71-beee-4080b71d8f8f
+
+###
+GET http://localhost:3001/auth/list
+
