@@ -1,0 +1,77 @@
+@import 'tailwindcss';
+
+@font-face {
+  font-family: 'Inter:Medium';
+  src: url('https://static.figma.com/font/Inter_1') format('woff2');
+  font-style: normal;
+  font-weight: 500;
+}
+
+@font-face {
+  font-family: 'Inter:Regular';
+  src: url('https://static.figma.com/font/Inter_1') format('woff2');
+  font-style: normal;
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: 'Inter:Semi Bold';
+  src: url('https://static.figma.com/font/Inter_1') format('woff2');
+  font-style: normal;
+  font-weight: 600;
+}
+
+@layer base {
+  body {
+    min-width: 320px;
+    background: #f9f9ff;
+    font-family: 'Inter:Regular', Inter, sans-serif;
+  }
+
+  button,
+  a,
+  input,
+  textarea {
+    transition-duration: 150ms;
+  }
+
+  button {
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  .profile-input {
+    display: flex;
+    min-height: 40px;
+    overflow: hidden;
+    border: 1px solid #e9eaf1;
+    border-radius: 10px;
+    background: #fcfcfe;
+    transition:
+      border-color 150ms ease,
+      box-shadow 150ms ease;
+  }
+
+  .profile-input:focus-within {
+    border-color: #d5c4ac;
+    box-shadow: 0 0 0 3px rgb(248 181 14 / 14%);
+  }
+
+  .profile-input > input,
+  .profile-input > textarea {
+    width: 100%;
+    min-width: 0;
+    padding: 9px 12px;
+    background: transparent;
+    font-family: 'Inter:Regular', Inter, sans-serif;
+    font-size: 13px;
+    line-height: 20px;
+    color: #5c5e63;
+    outline: none;
+  }
+
+  .profile-input > textarea {
+    min-height: 62px;
+  }
+}

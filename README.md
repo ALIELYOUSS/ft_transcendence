@@ -167,6 +167,19 @@ To inspect Ali's current work, check out the branch:
 git checkout alel-you
 ```
 
+## Settings frontend
+
+The current workspace contains the WeMeet settings frontend as a Vite React app. The settings sections are available at `/`, `/account`, `/notifications`, `/privacy`, and `/security`.
+
+### Run locally
+
+```bash
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173/` in your browser. The production build can be checked with `npm run build`, and previewed with `npm run preview`.
+
 ## Getting started
 
 ### Prerequisites
