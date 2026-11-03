@@ -17,8 +17,9 @@ const common_1 = require("@nestjs/common");
 const passport_1 = require("@nestjs/passport");
 const auth_service_1 = require("./auth.service");
 const create_auth_dto_1 = require("./dto/create-auth.dto");
-const update_auth_dto_1 = require("./dto/update-auth.dto");
 const refresh_token_dto_1 = require("./dto/refresh-token.dto");
+const update_auth_dto_1 = require("./dto/update-auth.dto");
+const guards_1 = require("./Guards/guards");
 let AuthController = class AuthController {
     authService;
     constructor(authService) {
@@ -39,8 +40,11 @@ let AuthController = class AuthController {
             sameSite: 'strict',
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-        return response.redirect(`${frontendUrl}/auth/google/callback?`);
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost';
+        const callbackUrl = new URL(`${frontendUrl}/auth/google/callback`);
+        callbackUrl.searchParams.set('accessToken', tokens.accessToken);
+        callbackUrl.searchParams.set('refreshToken', tokens.refreshToken);
+        return response.redirect(callbackUrl.toString());
     }
     login(credentials) {
         return this.authService.login(credentials.email, credentials.password);
@@ -108,12 +112,14 @@ __decorate([
 ], AuthController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)('list'),
+    (0, common_1.UseGuards)(guards_1.JwtGuard, guards_1.AdminGuard),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Get)(':id'),
+    (0, common_1.UseGuards)(guards_1.JwtGuard, guards_1.OwnerOrAdminGuard),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -121,6 +127,7 @@ __decorate([
 ], AuthController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Patch)(':id'),
+    (0, common_1.UseGuards)(guards_1.JwtGuard, guards_1.OwnerOrAdminGuard),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -129,6 +136,7 @@ __decorate([
 ], AuthController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
+    (0, common_1.UseGuards)(guards_1.JwtGuard, guards_1.OwnerOrAdminGuard),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),

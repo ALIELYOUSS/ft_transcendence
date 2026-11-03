@@ -1,6 +1,6 @@
+import { PrismaService } from '../prisma/prisma.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
-import { PrismaService } from '../prisma/prisma.service';
 export declare class AuthService {
     private readonly prisma;
     constructor(prisma: PrismaService);
@@ -99,7 +99,7 @@ export declare class AuthService {
     update(id: string, updateAuthDto: UpdateAuthDto): import("@prisma/client").Prisma.Prisma__UserClient<{
         username: string;
         email: string;
-        password: string;
+        password: string | null;
         id: string;
         googleId: string | null;
         bio: string | null;
@@ -114,7 +114,7 @@ export declare class AuthService {
     remove(id: string): import("@prisma/client").Prisma.Prisma__UserClient<{
         username: string;
         email: string;
-        password: string;
+        password: string | null;
         id: string;
         googleId: string | null;
         bio: string | null;

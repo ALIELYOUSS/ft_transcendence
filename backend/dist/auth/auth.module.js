@@ -17,6 +17,7 @@ const prisma_module_1 = require("../prisma/prisma.module");
 const config_1 = require("@nestjs/config");
 const google_oauth_config_1 = __importDefault(require("./google-oauth.config"));
 const google_strategy_1 = require("./google.strategy");
+const guards_1 = require("./Guards/guards");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
@@ -30,7 +31,7 @@ exports.AuthModule = AuthModule = __decorate([
             }),
         ],
         controllers: [auth_controller_1.AuthController],
-        providers: [auth_service_1.AuthService, google_strategy_1.GoogleStrategy],
+        providers: [auth_service_1.AuthService, google_strategy_1.GoogleStrategy, guards_1.JwtGuard, guards_1.AdminGuard, guards_1.OwnerOrAdminGuard],
     })
 ], AuthModule);
 //# sourceMappingURL=auth.module.js.map

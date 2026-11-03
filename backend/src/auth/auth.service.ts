@@ -1,9 +1,8 @@
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
+import { PrismaService } from '../prisma/prisma.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
-import { PrismaService } from '../prisma/prisma.service';
-import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
 const Jwt = require('jsonwebtoken');
 
 @Injectable()
@@ -45,7 +44,7 @@ export class AuthService {
           username,
           email: googleUser.email,
           googleId: googleUser.googleId,
-          password: await bcrypt.hash(randomBytes(32).toString('hex'), 10),
+          password: null,
           interests: {
             connectOrCreate: [],
           },
@@ -64,7 +63,7 @@ export class AuthService {
       where: { email },
     });
 
-    if (!user) {
+    if (!user || !user.password) {
       throw new ConflictException('Invalid email or password');
     }
 

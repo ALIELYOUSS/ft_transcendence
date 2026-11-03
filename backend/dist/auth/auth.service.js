@@ -44,9 +44,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
-const prisma_service_1 = require("../prisma/prisma.service");
 const bcrypt = __importStar(require("bcrypt"));
-const crypto_1 = require("crypto");
+const prisma_service_1 = require("../prisma/prisma.service");
 const Jwt = require('jsonwebtoken');
 let AuthService = class AuthService {
     prisma;
@@ -80,14 +79,14 @@ let AuthService = class AuthService {
                     username,
                     email: googleUser.email,
                     googleId: googleUser.googleId,
-                    password: await bcrypt.hash((0, crypto_1.randomBytes)(32).toString('hex'), 10),
+                    password: null,
                     interests: {
                         connectOrCreate: [],
                     },
                 },
             });
         }
-        const tokens = await this.createTokens(user.id, user.email);
+        const tokens = await this.createTokens(user.id);
         const { password: _, refreshedToken: __, ...response } = user;
         return { response, ...tokens };
     }
@@ -95,19 +94,19 @@ let AuthService = class AuthService {
         const user = await this.prisma.user.findUnique({
             where: { email },
         });
-        if (!user) {
+        if (!user || !user.password) {
             throw new common_1.ConflictException('Invalid email or password');
         }
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
             throw new common_1.ConflictException('Invalid email or password');
         }
-        const { accessToken, refreshToken } = await this.createTokens(user.id, user.email);
+        const { accessToken, refreshToken } = await this.createTokens(user.id);
         const { password: _, ...response } = user;
         return { response, accessToken, refreshToken };
     }
-    async createTokens(userId, email) {
-        const jwtPayload = { sub: userId, email };
+    async createTokens(userId) {
+        const jwtPayload = { sub: userId };
         const accessToken = Jwt.sign(jwtPayload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
         const refreshToken = Jwt.sign(jwtPayload, process.env.REFRESH_TOKEN_SECRET, {
             expiresIn: '7d',
@@ -136,7 +135,7 @@ let AuthService = class AuthService {
         if (!isRefreshTokenValid) {
             throw new common_1.UnauthorizedException('Invalid refresh token');
         }
-        const tokens = await this.createTokens(user.id, user.email);
+        const tokens = await this.createTokens(user.id);
         return tokens;
     }
     async reg(createAuthDto) {
