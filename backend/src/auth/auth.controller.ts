@@ -1,11 +1,11 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
   Req,
   Res,
   UseGuards,
@@ -14,8 +14,9 @@ import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { UpdateAuthDto } from './dto/update-auth.dto';
+import { AdminGuard, JwtGuard, OwnerOrAdminGuard } from './Guards/guards';
 
 @Controller('auth')
 export class AuthController {
@@ -53,7 +54,7 @@ export class AuthController {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost';
     const callbackUrl = new URL(`${frontendUrl}/auth/google/callback`);
     callbackUrl.searchParams.set('accessToken', tokens.accessToken);
     callbackUrl.searchParams.set('refreshToken', tokens.refreshToken);
@@ -72,21 +73,25 @@ export class AuthController {
   }
 
   @Get('list')
+  @UseGuards(JwtGuard, AdminGuard)
   findAll() {
     return this.authService.findAll();
   }
 
   @Get(':id')
+  @UseGuards(JwtGuard, OwnerOrAdminGuard)
   findOne(@Param('id') id: string) {
     return this.authService.findOne(id);
   }
 
   @Patch(':id')
+  @UseGuards(JwtGuard, OwnerOrAdminGuard)
   update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
     return this.authService.update(id, updateAuthDto);
   }
 
   @Delete(':id')
+  @UseGuards(JwtGuard, OwnerOrAdminGuard)
   remove(@Param('id') id: string) {
     return this.authService.remove(id);
   }
