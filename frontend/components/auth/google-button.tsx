@@ -5,7 +5,7 @@ type GoogleButtonProps = {
 export function GoogleButton({ label }: GoogleButtonProps) {
   return (
     <a
-      href="/api/auth/google"
+      href="https://localhost/api/auth/google/callback"
       className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#E8E4D8] bg-white text-sm font-medium text-black transition hover:bg-[#f3f0e8] focus:outline-none focus:ring-2 focus:ring-[#f8b50e] focus:ring-offset-2"
     >
       <img

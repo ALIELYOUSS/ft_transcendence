@@ -25,8 +25,10 @@ were committed or shared.
       [`backend/prisma/schema.prisma`](backend/prisma/schema.prisma), model
       `User`.
 - [x] Google IDs are unique in the `User` model through `googleId @unique`.
+- [x] `password` is nullable and the Google-only `googleId` field is unique in
+      the `User` model.
 - [x] Refresh tokens are stored as bcrypt hashes in the `refreshedToken` field
-      by `AuthService.login()` and `AuthService.googleLogin()` in
+      by `AuthService.login()` and `AuthService.loginWithGoogle()` in
       [`backend/src/auth/auth.service.ts`](backend/src/auth/auth.service.ts).
 
 ### Local authentication
@@ -44,8 +46,8 @@ were committed or shared.
 
 - [x] Google OAuth is wired through Passport using `GoogleStrategy` in
       [`backend/src/auth/google.strategy.ts`](backend/src/auth/google.strategy.ts).
-- [x] The service performs basic find-by-Google-ID, find-by-email, link, or
-      create behavior in `AuthService.googleLogin()` in
+- [x] The service performs Google-ID, email, link, or create behavior in
+      `AuthService.loginWithGoogle()` in
       [`backend/src/auth/auth.service.ts`](backend/src/auth/auth.service.ts).
 - [x] The OAuth flow uses Google's authorization-code Passport strategy rather
       than accepting a client-supplied access token.
@@ -74,14 +76,13 @@ were committed or shared.
 
 ### Critical priority
 
-- [ ] **Remove exposed secrets.** Rotate `ACCESS_TOKEN_SECRET`,
-      `REFRESH_TOKEN_SECRET`, Google credentials, and database credentials from
-      [`backend/.env`](backend/.env) and
-      [`docker-compose.yml`](docker-compose.yml). Add safe `.env.example`
-      files and verify secrets are not tracked or present in image layers.
+- [ ] **Finish external secret rotation.** Repository configuration is now
+      sanitized and Compose reads database values from the environment. Still
+      generate new JWT/database values, revoke the previously exposed Google
+      client secret in Google Cloud, and fill the local ignored `.env` files.
 - [ ] **Protect user administration routes.** Add JWT guards, ownership checks,
       and admin authorization to `GET /auth/list`, `GET /auth/:id`, `PATCH
-    /auth/:id`, and `DELETE /auth/:id` in
+/auth/:id`, and `DELETE /auth/:id` in
       [`backend/src/auth/auth.controller.ts`](backend/src/auth/auth.controller.ts).
 - [ ] **Stop returning sensitive fields.** `AuthService.update()` currently
       forwards broad DTO data and can return password and refresh-token data.
@@ -100,10 +101,9 @@ were committed or shared.
 
 ### High priority
 
-- [ ] **Use the requested user OAuth schema.** Make `password` nullable and add
-      generic `provider` and `providerId` fields, or document and enforce a
-      deliberate provider-specific model. Add a migration and update the
-      find-or-create service logic.
+- [ ] **Finish Google OAuth hardening.** The Google-only schema and service
+      path are complete. Still require verified Google email before email
+      linking and add OAuth state verification.
 - [ ] **Complete cookie-only token lifecycle.** Set refresh cookies on local
       login, Google login, and refresh with `HttpOnly`, `Secure`, explicit
       `SameSite`, and `Path=/api/auth`. Read cookies for refresh/logout, clear
@@ -161,8 +161,8 @@ were committed or shared.
 | Requirement               | Status | Evidence or gap                                          |
 | ------------------------- | ------ | -------------------------------------------------------- |
 | Unique email              | `[x]`  | `User.email @unique` in `schema.prisma`                  |
-| Nullable password         | `[ ]`  | Password is currently required                           |
-| `provider` / `providerId` | `[ ]`  | Only `googleId` exists                                   |
+| Nullable password         | `[x]`  | `User.password String?` and OAuth users use `null`       |
+| `googleId`                | `[x]`  | Unique Google identity field in `User`                   |
 | Hashed refresh token      | `[x]`  | bcrypt hash stored by `AuthService`                      |
 | 2FA fields                | `[ ]`  | No TOTP fields exist                                     |
 | Strict DTO validation     | `[ ]`  | Basic validation only; login is inline; no forbid flag   |

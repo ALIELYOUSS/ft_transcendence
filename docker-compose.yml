@@ -7,11 +7,11 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: 555
-      POSTGRES_DB: trans_db
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d trans_db"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -32,7 +32,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: 3001
-      DATABASE_URL: postgresql://user:555@db:5432/trans_db
+      DATABASE_URL: postgresql://${POSTGRES_USER:?POSTGRES_USER is required}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@db:5432/${POSTGRES_DB:?POSTGRES_DB is required}
       FRONTEND_URL: https://localhost
     env_file:
       - ./backend/.env
