@@ -1,0 +1,14 @@
+:root {
+  --color-role-base: #0b0e12;
+  --color-role-amber: #f8b50e;
+  --color-role-cool: #3c64c8;
+  --color-role-black: #000000;
+  --color-role-white: #ffffff;
+
+  --color-role-subtext: rgb(255 255 255 / 60%);
+  --color-role-border: rgb(255 255 255 / 10%);
+  --color-role-amber-glow: rgb(248 181 14 / 14%);
+  --color-role-amber-soft: rgb(248 181 14 / 6%);
+  --color-role-cream-glow: rgb(255 255 255 / 4%);
+  --color-role-cool-glow: rgb(60 100 200 / 5%);
+}
