@@ -1,9 +1,34 @@
-import { LegalNotice } from "@/components/login/legal_notice";
-import { SignupPrompt } from "@/components/login/signup_prompt";    
+"use client"
+
+import { GoogleButton } from "@/components/auth/google-button";
+import { SignupPrompt } from "./signup_prompt";
+import { LegalNotice } from "./legal_notice";
+import { useState } from "react";
 
 export function LoginCard() {
-  return (
-    <div className="flex h-[598px] w-[390px] flex-col items-center rounded-xl border-2 border-[#E8E4D8] px-8 pt-10">
+const [email, setEmail] = useState("");
+const [password, setPassword] = useState("");
+
+const handleLogin = async () => {
+    try {
+        await fetch("http://localhost:3000/auth/login", {
+            method: "POST",
+            headers:{
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                email: email,
+                password: password
+            })
+        })
+    } catch (error) {
+        console.error("Error in handleLogin function:", error);
+    }
+}
+
+
+return (
+    <div className="flex h-[620px] w-[390px] flex-col items-center rounded-xl border-2 border-[#E8E4D8] px-8 pt-10">
             <img
                 src="/logo.png"
                 alt="WeMeet logo"
@@ -19,20 +44,8 @@ export function LoginCard() {
                 Please enter your details to sign in to your account.
             </p>
 
-        <div className="mt-7 flex h-11 w-full items-center justify-center rounded-lg border border-[#E8E4D8] bg-white text-sm font-medium text-black hover:bg-[#d8d3c5]">
-            <button
-                type="button"
-                className="flex items-center">
-                Continue with Google
-                <div className="ml-2 flex h-[20px] w-[20px] items-center justify-center rounded-full">
-                    <img
-                        src="/google_logo.png"
-                        alt="Google logo"
-                        width={20}
-                        height={20}
-                        className="h-[20px] w-[20px] object-contain"/>
-                </div>
-            </button>
+        <div className="mt-7 w-full">
+            <GoogleButton label="Continue with Google" />
         </div>
 
         <div className="my-5 flex w-full items-center gap-3 text-xs text-white/60">
@@ -47,6 +60,8 @@ export function LoginCard() {
                 <input
                 type="email"
                 name="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
                 placeholder="email@example.com"
                 className="h-11 rounded-lg border border-[#E8E4D8]/70 bg-[#E8E4D8] px-3 text-sm outline-none placeholder:text-black/40 focus:border-[#E8E4D8]"/>
@@ -57,6 +72,8 @@ export function LoginCard() {
             <input
                 type="password"
                 name="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
                 placeholder="Enter your password"
                 className="h-11 rounded-lg border border-[#E8E4D8]/70 bg-[#E8E4D8] px-3 text-sm  outline-none placeholder:text-black/40 focus:border-[#E8E4D8]"
@@ -68,10 +85,14 @@ export function LoginCard() {
 
         <button
             type="submit"
-            className="mt-6 h-11 w-full rounded-lg border border-[#E8E4D8] bg-white text-sm font-semibold text-black hover:bg-[#d8d3c5]">
+            onSubmit={(e) => {e.preventDefault(); handleLogin();}}
+            className="mt-6 h-11 w-full rounded-lg border border-[#f8b50e] bg-linear-to-r from-[#f8b50e] to-[#ffd66b] text-sm font-semibold text-black transition hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-[#f8b50e] focus:ring-offset-2">
             Sign in
         </button>
-
+        <div className="mt-2">
+            <SignupPrompt />
+        </div>
+        <LegalNotice />
     </div>
   );
 }

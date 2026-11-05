@@ -1,7 +1,7 @@
 export function LegalNotice() {
   return (
-    <div className="absolute bottom-4">
-      <p className="text-xs text-black">
+    <div className="absolute bottom-4 flex w-full flex-col items-center gap-1 text-center">
+      <p className="text-[10px] text-black">
         By signing in, you agree to our{" "}
         <a
           href="/terms"
