@@ -1,5 +1,5 @@
 # Local database data
-/data
+data
 
 # Dependencies and generated output
 /node_modules/
@@ -23,3 +23,6 @@ frontend/.next/
 
 # Uploaded files
 /backend/uploads/
+
+# Team todo file
+TODO.md

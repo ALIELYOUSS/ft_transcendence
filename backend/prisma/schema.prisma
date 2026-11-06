@@ -21,7 +21,7 @@ model User {
   latitude              Float?
   longitude             Float?
   role                  UserRole               @default(USER)
-  password              String
+  password              String?
   interests             Interest[]             @relation("UserInterests")
   profile               Profile?
   friends               Friend[]               @relation("UserFriends")
