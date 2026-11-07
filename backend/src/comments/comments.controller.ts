@@ -6,9 +6,19 @@ import {
   Body,
   Param,
   BadRequestException,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
-import { ApiBody } from '@nestjs/swagger';
+import { ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { Request } from 'express';
 import { CommentsService } from './comments.service';
+import { JwtGuard } from '../auth/Guards/guards';
+
+interface AuthenticatedRequest extends Request {
+  user: {
+    sub: string;
+  };
+}
 
 @Controller('posts/:postId/comments')
 export class CommentsController {
@@ -22,6 +32,8 @@ export class CommentsController {
   }
 
   @Post()
+  @UseGuards(JwtGuard)
+  @ApiBearerAuth()
   @ApiBody({
     schema: {
       type: 'object',
@@ -37,6 +49,7 @@ export class CommentsController {
   create(
     @Param('postId') postId: string,
     @Body('content') content: string,
+    @Req() request: AuthenticatedRequest,
   ) {
     if (!content || !content.trim()) {
       throw new BadRequestException(
@@ -44,7 +57,12 @@ export class CommentsController {
       );
     }
 
-    return this.commentsService.create(postId, content);
+    return this.commentsService.create(
+      postId,
+      content,
+      request.user.sub,
+    );
   }
 }
+
 

@@ -8,7 +8,16 @@ import 'dotenv/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.use('/uploads', serveStatic(join(process.cwd(), 'uploads')));
+  //app.use('/uploads', serveStatic(join(process.cwd(), 'uploads')));
+    app.use(
+    '/uploads/posts',
+    serveStatic(join(process.cwd(), 'uploads', 'posts')),
+  );
+
+  app.use(
+    '/uploads/avatars',
+    serveStatic(join(process.cwd(), 'uploads', 'avatars')),
+  );
   const swaggerConfig = new DocumentBuilder()
     .setTitle('wemeet API')
     .setDescription('API documentation for the wemeet platform')

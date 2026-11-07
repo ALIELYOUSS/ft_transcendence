@@ -1,15 +1,9 @@
 -- CreateEnum
-CREATE TYPE "UserRole" AS ENUM ('USER', 'ADMIN');
-
--- CreateEnum
 CREATE TYPE "ReportStatus" AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED');
 
 -- AlterTable
 ALTER TABLE "Post" ADD COLUMN     "image_url" TEXT,
 ALTER COLUMN "content" DROP NOT NULL;
-
--- AlterTable
-ALTER TABLE "User" ADD COLUMN     "role" "UserRole" NOT NULL DEFAULT 'USER';
 
 -- CreateTable
 CREATE TABLE "HiddenPost" (

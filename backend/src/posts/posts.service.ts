@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  BadRequestException,
-  NotFoundException,//for update post
-  ForbiddenException,// for update post
-} from '@nestjs/common';
+import { Injectable, BadRequestException,NotFoundException,ForbiddenException,} from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePostDto } from './dto/create-post.dto';

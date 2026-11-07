@@ -1,3 +1,4 @@
+
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -31,9 +32,11 @@ export class CommentsService {
     });
   }
 
-  async create(postId: string, content: string) {
-    const userId = '8b61ff73-976b-47c6-b0e0-6737f2e28850';
-
+  async create(
+    postId: string,
+    content: string,
+    userId: string,
+  ) {
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
     });
@@ -60,3 +63,4 @@ export class CommentsService {
     });
   }
 }
+

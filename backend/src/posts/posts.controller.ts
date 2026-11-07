@@ -1,50 +1,66 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Patch,
-  Delete,
-  Param,
-  Body,
-} from '@nestjs/common';
+import {Controller,Post,Get,Patch,Delete,Param,Body,UseGuards,Req,} from '@nestjs/common';
+
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { Request } from 'express';
 
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { JwtGuard } from '../auth/Guards/guards';
+
+interface AuthenticatedRequest extends Request {
+  user: {
+    sub: string;
+  };
+}
 
 @Controller('posts')
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Post()
-  create(@Body() createPostDto: CreatePostDto) {
+  @UseGuards(JwtGuard)
+  @ApiBearerAuth()
+  create(
+    @Body() createPostDto: CreatePostDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
     return this.postsService.create(
-      '8b61ff73-976b-47c6-b0e0-6737f2e28850',
+      request.user.sub,
       createPostDto,
     );
   }
 
   @Get()
-    findAll() {
-        return this.postsService.findAll();
-    }
- 
+  findAll() {
+    return this.postsService.findAll();
+  }
+
   @Patch(':id')
-    update(
+  @UseGuards(JwtGuard)
+  @ApiBearerAuth()
+  update(
     @Param('id') id: string,
     @Body() updatePostDto: UpdatePostDto,
-    ) {
+    @Req() request: AuthenticatedRequest,
+  ) {
     return this.postsService.update(
-        id,
-        '8b61ff73-976b-47c6-b0e0-6737f2e28850',
-        updatePostDto,
+      id,
+      request.user.sub,
+      updatePostDto,
     );
-}
-@Delete(':id')
-remove(@Param('id') id: string) {
-  return this.postsService.remove(
-    id,
-    '8b61ff73-976b-47c6-b0e0-6737f2e28850',
-  );
-}
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtGuard)
+  @ApiBearerAuth()
+  remove(
+    @Param('id') id: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return this.postsService.remove(
+      id,
+      request.user.sub,
+    );
+  }
 }

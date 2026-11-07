@@ -1,5 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const path_1 = require("path");
+const express_1 = require("express");
 const core_1 = require("@nestjs/core");
 const swagger_1 = require("@nestjs/swagger");
 const app_module_1 = require("./app.module");
@@ -7,6 +9,8 @@ const common_1 = require("@nestjs/common");
 require("dotenv/config");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    app.use('/uploads/posts', (0, express_1.static)((0, path_1.join)(process.cwd(), 'uploads', 'posts')));
+    app.use('/uploads/avatars', (0, express_1.static)((0, path_1.join)(process.cwd(), 'uploads', 'avatars')));
     const swaggerConfig = new swagger_1.DocumentBuilder()
         .setTitle('wemeet API')
         .setDescription('API documentation for the wemeet platform')

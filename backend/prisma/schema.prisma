@@ -33,6 +33,7 @@ model User {
   reportedPosts         PostReport[]
   savedPosts            SavedPost[]
   messages              Message[]
+  uploadedFiles         UploadedFile[]
   hostedSlots           Slot[]                 @relation("SlotHost")
   slotParticipants      SlotParticipant[]
   groupChatParticipants GroupChatParticipant[]
@@ -139,6 +140,26 @@ model Like {
   @@unique([userId, postId])
 }
 
+model UploadedFile {
+  id           String        @id @default(uuid()) @db.Uuid
+  ownerId      String        @map("owner_id") @db.Uuid
+  originalName String        @map("original_name")
+  storageKey   String        @unique @map("storage_key")
+  mimeType     String        @map("mime_type")
+  size         Int
+  purpose      UploadPurpose
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  messageId String?  @map("message_id") @db.Uuid
+  message   Message? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId])
+  @@index([messageId])
+  @@map("uploaded_files")
+}
+
 model Slot {
   id             String            @id @default(uuid()) @db.Uuid
   hostId         String            @map("host_id") @db.Uuid
@@ -177,13 +198,14 @@ model GroupChat {
 }
 
 model Message {
-  id        String    @id @default(uuid()) @db.Uuid
-  chatId    String    @map("chat_id") @db.Uuid
-  senderId  String    @map("sender_id") @db.Uuid
-  content   String
-  createdAt DateTime  @default(now()) @map("created_at")
-  chat      GroupChat @relation(fields: [chatId], references: [id])
-  sender    User      @relation(fields: [senderId], references: [id])
+  id          String         @id @default(uuid()) @db.Uuid
+  chatId      String         @map("chat_id") @db.Uuid
+  senderId    String         @map("sender_id") @db.Uuid
+  content     String
+  createdAt   DateTime       @default(now()) @map("created_at")
+  chat        GroupChat      @relation(fields: [chatId], references: [id])
+  sender      User           @relation(fields: [senderId], references: [id])
+  attachments UploadedFile[]
 }
 
 model GroupChatParticipant {
@@ -206,6 +228,12 @@ enum FriendStatus {
   PENDING
   ACCEPTED
   BLOCKED
+}
+
+enum UploadPurpose {
+  AVATAR
+  POST
+  CHAT
 }
 
 enum ReportStatus {

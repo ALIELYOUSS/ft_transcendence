@@ -11,10 +11,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthModule = void 0;
 const common_1 = require("@nestjs/common");
-const auth_service_1 = require("./auth.service");
-const auth_controller_1 = require("./auth.controller");
-const prisma_module_1 = require("../prisma/prisma.module");
 const config_1 = require("@nestjs/config");
+const prisma_module_1 = require("../prisma/prisma.module");
+const auth_controller_1 = require("./auth.controller");
+const auth_service_1 = require("./auth.service");
 const google_oauth_config_1 = __importDefault(require("./google-oauth.config"));
 const google_strategy_1 = require("./google.strategy");
 const guards_1 = require("./Guards/guards");
@@ -32,6 +32,7 @@ exports.AuthModule = AuthModule = __decorate([
         ],
         controllers: [auth_controller_1.AuthController],
         providers: [auth_service_1.AuthService, google_strategy_1.GoogleStrategy, guards_1.JwtGuard, guards_1.AdminGuard, guards_1.OwnerOrAdminGuard],
+        exports: [guards_1.JwtGuard],
     })
 ], AuthModule);
 //# sourceMappingURL=auth.module.js.map
