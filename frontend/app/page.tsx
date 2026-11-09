@@ -4,12 +4,23 @@ import { WeekDayCalendar } from "./week-day-calendar";
 import { MessageCircle } from "lucide-react";
 import { Map, MapPin } from "lucide-react";
 import Sidebar from "../component/leftbar";
+import { useState,useEffect }  from "react";
+
 const time = new Date().toLocaleTimeString("en-GB", {
   hour: "2-digit",
   minute: "2-digit",
 })
+// just for the page title "ktkhedem ghire mea server "
+/*
+export const metadata = {
+    title:"wemeet slots",
+}*/
+
 
 export default function Home() {
+  
+  
+
   return (
     <div className="min-h-screen bg-[#e7e1d6]">
       <div className="mx-auto flex min-h-screen w-full overflow-hidden border border-[#e7e0d8] bg-[#f3f3f1] shadow-[0_20px_50px_rgba(18,22,30,0.08)]">

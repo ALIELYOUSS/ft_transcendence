@@ -1,156 +1,170 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { addDays, endOfWeek, format, getISOWeek, isSameDay, parseISO, startOfWeek } from "date-fns";
-import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { z } from "zod";
+import { addDays, addWeeks, format, startOfWeek } from "date-fns";
+import { useEffect, useState } from "react";
+import { AgendaCalendarView } from "./agenda-calendar-view";
+import { BookingDialog } from "./booking-dialog";
+import { CalendarHeader } from "./calendar-header";
+import {
+  BOOKINGS_STORAGE_KEY,
+  dateKey,
+  defaultStartTime,
+  DEMO_CURRENT_USER_ID,
+  demoEvents,
+  getAttendeeCount as countAttendees,
+  normalizeStoredEvents,
+  STORAGE_KEY,
+} from "./calendar-utils";
+import type { CalendarEvent, CalendarView } from "./calendar-utils";
+import { SlotDialog } from "./slot-dialog";
+import { WeekCalendarView } from "./week-calendar-view";
 
-import { AddEventDialog } from "@/calendar/components/dialogs/add-event-dialog";
-import { DndProviderWrapper } from "@/calendar/components/dnd/dnd-provider";
-import { CalendarWeekView } from "@/calendar/components/week-and-day-view/calendar-week-view";
-import { CalendarProvider, useCalendar } from "@/calendar/contexts/calendar-context";
+const emptyDraft = (date: Date, start: string): CalendarEvent => {
+  const [hours, minutes] = start.split(":").map(Number);
+  const endMinutes = hours * 60 + minutes + 60;
+  const end = `${String(Math.floor(endMinutes / 60)).padStart(2, "0")}:${String(endMinutes % 60).padStart(2, "0")}`;
 
-import type { IEvent, IUser } from "@/calendar/interfaces";
+  return {
+    id: "",
+    title: "",
+    date: dateKey(date),
+    start,
+    end,
+    location: "",
+    category: "Social",
+    capacity: 6,
+    joinedCount: 1,
+    user: { id: DEMO_CURRENT_USER_ID, name: "You" },
+  };
+};
 
-const STORAGE_KEY = "frontend.calendar.events.v1";
-const storedEventsSchema = z.array(
-  z.object({
-    id: z.number(),
-    startDate: z.string().datetime(),
-    endDate: z.string().datetime(),
-    title: z.string(),
-    color: z.enum(["blue", "green", "red", "yellow", "purple", "orange", "gray"]),
-    description: z.string(),
-    user: z.object({
-      id: z.string(),
-      name: z.string(),
-      picturePath: z.string().nullable(),
-    }),
-  })
-);
-
-function WeekDayCalendarContent() {
-  const { selectedDate, setSelectedDate, events } = useCalendar();
-  const weekStart = useMemo(() => startOfWeek(selectedDate), [selectedDate]);
-  const weekEnd = useMemo(() => endOfWeek(selectedDate), [selectedDate]);
-
-  const visibleEvents = useMemo(
-    () =>
-      events.filter(event => {
-        const eventStart = parseISO(event.startDate);
-        const eventEnd = parseISO(event.endDate);
-        return eventStart <= weekEnd && eventEnd >= weekStart;
-      }),
-    [events, weekEnd, weekStart]
-  );
-
-  const singleDayEvents = visibleEvents.filter(event => isSameDay(parseISO(event.startDate), parseISO(event.endDate)));
-  const multiDayEvents = visibleEvents.filter(event => !isSameDay(parseISO(event.startDate), parseISO(event.endDate)));
-  const periodLabel = `${format(weekStart, "MMM d")} – ${format(weekEnd, "MMM d, yyyy")}`;
-
-  const shiftDate = (amount: number) => setSelectedDate(addDays(selectedDate, amount));
-
-  return (
-    <main className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 px-2 py-3 sm:px-3">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-[#eef1f5] text-[#d99d00]">
-            <CalendarDays className="size-4" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-sm font-semibold text-[#252a37]">Weekly Meet Slots</h1>
-              <span className="rounded bg-[#eef1f5] px-1.5 py-0.5 text-[9px] font-bold text-[#586071]">W{getISOWeek(selectedDate)}</span>
-            </div>
-            <p className="text-[10px] text-[#767d8d]">{periodLabel}</p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-1.5">
-          <button type="button" className="rounded-md border border-[#dfe3ed] px-3 py-2 text-xs font-medium text-[#3a4253] hover:bg-[#f6f7fb]" onClick={() => setSelectedDate(new Date())}>
-            Today
-          </button>
-          <button type="button" aria-label="Previous week" className="rounded-md border border-[#dfe3ed] px-3 py-2 text-[#3a4253] hover:bg-[#f6f7fb]" onClick={() => shiftDate(-7)}>
-            <ChevronLeft className="size-4" />
-          </button>
-          <button type="button" aria-label="Next week" className="rounded-md border border-[#dfe3ed] px-3 py-2 text-[#3a4253] hover:bg-[#f6f7fb]" onClick={() => shiftDate(7)}>
-            <ChevronRight className="size-4" />
-          </button>
-          <AddEventDialog startDate={selectedDate}>
-            <button type="button" className="flex items-center gap-1 rounded-md bg-[#efb92d] px-3 py-2 text-xs font-semibold text-[#282313] hover:bg-[#e7ad1d]">
-              <Plus className="size-3.5" /> New Slot
-            </button>
-          </AddEventDialog>
-        </div>
-      </header>
-
-      <section id="week-calendar" className="overflow-hidden rounded-xl border border-[#ece5dc] bg-white">
-        <DndProviderWrapper>
-          <CalendarWeekView singleDayEvents={singleDayEvents} multiDayEvents={multiDayEvents} />
-        </DndProviderWrapper>
-      </section>
-    </main>
-  );
-}
-
-function PersistCalendarEvents({ onError }: { onError: (message: string | null) => void }) {
-  const { events } = useCalendar();
+export function WeekDayCalendar() {
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [events, setEvents] = useState(() => demoEvents(new Date()));
+  const [bookedEventIds, setBookedEventIds] = useState<string[]>([]);
+  const [view, setView] = useState<CalendarView>("week");
+  const [draft, setDraft] = useState<CalendarEvent | null>(null);
+  const [bookingEvent, setBookingEvent] = useState<CalendarEvent | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
-      onError(null);
-    } catch (error) {
-      onError(`Could not save bookings in this browser: ${error instanceof Error ? error.message : String(error)}`);
+      const savedEvents = localStorage.getItem(STORAGE_KEY);
+      const savedBookings = localStorage.getItem(BOOKINGS_STORAGE_KEY);
+      if (savedEvents) {
+        setEvents(normalizeStoredEvents(JSON.parse(savedEvents), DEMO_CURRENT_USER_ID));
+      }
+      if (savedBookings) {
+        setBookedEventIds(JSON.parse(savedBookings));
+      }
+    } catch {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(BOOKINGS_STORAGE_KEY);
     }
-  }, [events, onError]);
-
-  return null;
-}
-
-export function WeekDayCalendar() {
-  const [calendarData, setCalendarData] = useState<{ events: IEvent[]; users: IUser[] } | null>(null);
-  const [storageError, setStorageError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    import("@/calendar/mocks")
-      .then(({ CALENDAR_ITEMS_MOCK, USERS_MOCK }) => {
-        const savedEvents = window.localStorage.getItem(STORAGE_KEY);
-        const parsedEvents = savedEvents === null ? null : storedEventsSchema.safeParse(JSON.parse(savedEvents));
-
-        if (parsedEvents && !parsedEvents.success) {
-          throw new Error("Saved bookings have an invalid format. Clear this site's local storage to reset the calendar.");
-        }
-
-        if (isMounted) {
-          setCalendarData({
-            events: parsedEvents?.success ? parsedEvents.data : CALENDAR_ITEMS_MOCK,
-            users: USERS_MOCK,
-          });
-        }
-      })
-      .catch(error => {
-        if (isMounted) setStorageError(`Could not load saved bookings: ${error instanceof Error ? error.message : String(error)}`);
-      });
-
-    return () => {
-      isMounted = false;
-    };
+    setIsHydrated(true);
   }, []);
 
-  if (!calendarData) {
-    if (storageError) return <p className="p-6 text-sm text-destructive">{storageError}</p>;
-    return <p className="p-6 text-sm text-muted-foreground">Loading calendar…</p>;
-  }
+  useEffect(() => {
+    if (!isHydrated) return;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+    localStorage.setItem(BOOKINGS_STORAGE_KEY, JSON.stringify(bookedEventIds));
+  }, [bookedEventIds, events, isHydrated]);
+
+  const weekStart = startOfWeek(selectedDate);
+  const days = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
+  const periodLabel = `${format(days[0], "MMM d")} – ${format(days[6], "MMM d, yyyy")}`;
+  const attendeeCount = (event: CalendarEvent) => countAttendees(event, bookedEventIds);
+
+  const openNewSlot = (date: Date, start?: string) => {
+    const startTime = start ?? defaultStartTime(date);
+    if (startTime) setDraft(emptyDraft(date, startTime));
+  };
+
+  const saveSlot = (formEvent: React.FormEvent<HTMLFormElement>) => {
+    formEvent.preventDefault();
+    if (!draft || draft.end <= draft.start) return;
+
+    if (draft.id) {
+      setEvents((current) => current.map((event) => event.id === draft.id ? draft : event));
+    } else {
+      setEvents((current) => [...current, { ...draft, id: crypto.randomUUID() }]);
+    }
+    setDraft(null);
+  };
+
+  const deleteSlot = () => {
+    if (!draft) return;
+    setEvents((current) => current.filter((event) => event.id !== draft.id));
+    setDraft(null);
+  };
+
+  const joinSlot = () => {
+    if (!bookingEvent || attendeeCount(bookingEvent) >= bookingEvent.capacity) return;
+    setBookedEventIds((current) => current.includes(bookingEvent.id) ? current : [...current, bookingEvent.id]);
+    setBookingEvent(null);
+  };
+
+  const leaveSlot = () => {
+    if (!bookingEvent) return;
+    setBookedEventIds((current) => current.filter((id) => id !== bookingEvent.id));
+    setBookingEvent(null);
+  };
+
+  const canCreate = days.some((day) => defaultStartTime(day) !== null);
 
   return (
-    <CalendarProvider events={calendarData.events} users={calendarData.users}>
-      <PersistCalendarEvents onError={setStorageError} />
-      {storageError && <p role="alert" className="px-2 pb-2 text-sm text-destructive">{storageError}</p>}
-      <WeekDayCalendarContent />
-    </CalendarProvider>
+    <>
+      <CalendarHeader
+        selectedDate={selectedDate}
+        periodLabel={periodLabel}
+        view={view}
+        canCreate={canCreate}
+        onToday={() => setSelectedDate(new Date())}
+        onShift={(amount) => setSelectedDate((current) => addWeeks(current, amount))}
+        onViewChange={setView}
+        onCreate={() => openNewSlot(selectedDate)}
+      />
+      {view === "week" ? (
+        <WeekCalendarView
+          days={days}
+          events={events}
+          currentUserId={DEMO_CURRENT_USER_ID}
+          getAttendeeCount={attendeeCount}
+          onCreate={openNewSlot}
+          onEdit={setDraft}
+          onBook={setBookingEvent}
+        />
+      ) : (
+        <AgendaCalendarView
+          days={days}
+          events={events}
+          currentUserId={DEMO_CURRENT_USER_ID}
+          getAttendeeCount={attendeeCount}
+          onCreate={(date) => openNewSlot(date)}
+          onEdit={setDraft}
+          onBook={setBookingEvent}
+        />
+      )}
+      {draft && (
+        <SlotDialog
+          draft={draft}
+          isEditing={Boolean(draft.id)}
+          onDraftChange={setDraft}
+          onClose={() => setDraft(null)}
+          onSave={saveSlot}
+          onDelete={deleteSlot}
+        />
+      )}
+      {bookingEvent && (
+        <BookingDialog
+          event={bookingEvent}
+          attendeeCount={attendeeCount(bookingEvent)}
+          isBooked={bookedEventIds.includes(bookingEvent.id)}
+          onClose={() => setBookingEvent(null)}
+          onJoin={joinSlot}
+          onLeave={leaveSlot}
+        />
+      )}
+    </>
   );
 }
-
