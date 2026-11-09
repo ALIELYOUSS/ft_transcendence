@@ -5,6 +5,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { LegalNotice } from './legal_notice';
 import { SignupPrompt } from './signup_prompt';
+import Image from 'next/image';
 
 export function LoginCard() {
   const [email, setEmail] = useState('');
@@ -14,16 +15,22 @@ export function LoginCard() {
     event.preventDefault();
 
     try {
-      await fetch('/api/auth/login', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           email: email,
           password: password,
         }),
       });
+
+      if (!res.ok) {
+        // throw new ERROR("error")
+        return 404;
+      }
     } catch (error) {
       console.error('Error in handleLogin function:', error);
     }
@@ -31,7 +38,7 @@ export function LoginCard() {
 
   return (
     <div className="flex h-[620px] w-[390px] flex-col items-center rounded-xl border-2 border-[#E8E4D8] px-8 pt-10">
-      <img
+      <Image
         src="/logo.png"
         alt="WeMeet logo"
         width={80}
@@ -83,13 +90,14 @@ export function LoginCard() {
             className="h-11 rounded-lg border border-[#E8E4D8]/70 bg-[#E8E4D8] px-3 text-sm  outline-none placeholder:text-black/40 focus:border-[#E8E4D8]"
           />
         </label>
-      <button
-        type="submit"
-        className="mt-6 h-11 w-full rounded-lg border border-[#f8b50e] bg-linear-to-r from-[#f8b50e] to-[#ffd66b] text-sm font-semibold text-black transition hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-[#f8b50e] focus:ring-offset-2"
-      >
-        Sign in
-      </button>
+        <button
+          type="submit"
+          className="mt-6 h-11 w-full rounded-lg border border-[#f8b50e] bg-linear-to-r from-[#f8b50e] to-[#ffd66b] text-sm font-semibold text-black transition hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-[#f8b50e] focus:ring-offset-2"
+        >
+          Sign in
+        </button>
       </form>
+
       <div className="mt-2">
         <SignupPrompt />
       </div>

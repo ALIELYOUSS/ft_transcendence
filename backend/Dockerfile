@@ -19,4 +19,5 @@ ENV NODE_ENV=production
 
 EXPOSE 3001
 
-CMD ["npm", "run", "start:prod"]
+# Apply pending migrations (non-destructive) before starting the API.
+CMD ["sh", "-c", "npx prisma migrate deploy && npm run start:prod"]

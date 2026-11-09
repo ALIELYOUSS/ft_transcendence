@@ -11,7 +11,6 @@ export class CreateAuthDto {
 
   @IsNotEmpty()
   @IsString()
-  @ArrayMinSize(8)
   password: string;
 
   @IsArray()
