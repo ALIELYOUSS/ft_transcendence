@@ -1,4 +1,10 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -56,7 +62,7 @@ export class AdminGuard implements CanActivate {
     });
 
     if (user?.role !== 'ADMIN') {
-      throw new UnauthorizedException('Administrator access is required');
+      throw new ForbiddenException('Administrator access is required');
     }
 
     return true;
@@ -86,7 +92,7 @@ export class OwnerOrAdminGuard implements CanActivate {
     });
 
     if (user?.role !== 'ADMIN') {
-      throw new UnauthorizedException('You can only access your own account');
+      throw new ForbiddenException('You can only access your own account');
     }
 
     return true;

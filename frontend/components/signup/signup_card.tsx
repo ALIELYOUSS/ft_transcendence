@@ -16,7 +16,9 @@ export function SignupCard() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const formData = new FormData(event.currentTarget);
+    // Save the form now: React sets event.currentTarget to null once the handler awaits.
+    const form = event.currentTarget;
+    const formData = new FormData(form);
 
     const body = {
       username: formData.get('username'),
@@ -42,7 +44,7 @@ export function SignupCard() {
 
       setSuccess('Account created successfully');
       setError('');
-      event.currentTarget.reset();
+      form.reset();
       setSelectedInterests([]);
     } catch (error) {
       setSuccess('');

@@ -8,7 +8,15 @@ Content-Type: application/json
   "interests": ["coding", "reading", "gaming"]
 }
 ###
+POST http://localhost:3001/auth/login
+Content-Type: application/json
 
+{
+  "email": "test@gl.com",
+  "password": "testpassword"
+}
+
+###
 DELETE http://localhost:3001/auth/e54d7127-b807-4e71-beee-4080b71d8f8f
 
 ###

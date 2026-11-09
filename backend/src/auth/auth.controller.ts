@@ -3,7 +3,10 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Req,
@@ -13,7 +16,9 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateAuthDto } from './dto/create-auth.dto';
+import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 import { AdminGuard, JwtGuard, OwnerOrAdminGuard } from './Guards/guards';
@@ -63,7 +68,8 @@ export class AuthController {
   }
 
   @Post('login')
-  login(@Body() credentials: { email: string; password: string }) {
+  @HttpCode(HttpStatus.OK)
+  login(@Body() credentials: LoginDto) {
     return this.authService.login(credentials.email, credentials.password);
   }
 
@@ -80,19 +86,30 @@ export class AuthController {
 
   @Get(':id')
   @UseGuards(JwtGuard, OwnerOrAdminGuard)
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.authService.findOne(id);
   }
 
   @Patch(':id')
   @UseGuards(JwtGuard, OwnerOrAdminGuard)
-  update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateAuthDto: UpdateAuthDto) {
     return this.authService.update(id, updateAuthDto);
+  }
+
+  @Patch(':id/password')
+  @UseGuards(JwtGuard, OwnerOrAdminGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  changePassword(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() changePasswordDto: ChangePasswordDto
+  ) {
+    return this.authService.changePassword(id, changePasswordDto);
   }
 
   @Delete(':id')
   @UseGuards(JwtGuard, OwnerOrAdminGuard)
-  remove(@Param('id') id: string) {
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.authService.remove(id);
   }
 }
