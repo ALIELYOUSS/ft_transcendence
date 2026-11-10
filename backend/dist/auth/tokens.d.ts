@@ -1,0 +1,10 @@
+import type { Response } from 'express';
+export declare function signAccessToken(userId: string): string;
+export declare function signRefreshToken(userId: string): string;
+export declare function verifyAccessToken(token: string): string | null;
+export declare function verifyRefreshToken(token: string): string | null;
+export declare function hashRefreshToken(token: string): string;
+export declare function refreshTokenMatches(token: string, storedHash: string): boolean;
+export declare const REFRESH_COOKIE = "refreshToken";
+export declare function setRefreshCookie(res: Response, token: string): void;
+export declare function clearRefreshCookie(res: Response): void;

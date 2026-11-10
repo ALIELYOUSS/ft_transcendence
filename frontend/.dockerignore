@@ -1,0 +1,3 @@
+# Build inside Docker from the source only, never from local build output.
+node_modules
+.next

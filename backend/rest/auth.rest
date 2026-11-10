@@ -1,0 +1,237 @@
+@api = http://localhost:3001/auth
+
+@username = rest_tester
+@email = rest_tester@test.local
+@password = pass1234
+@newPassword = newpass1234
+
+
+POST {{api}}/register
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "email": "{{email}}",
+  "password": "{{password}}",
+  "interests": ["coding", "gaming"]
+}
+
+### 2. Register with the same email → 409 "Email is already registered"
+POST {{api}}/register
+Content-Type: application/json
+
+{
+  "username": "someone_else",
+  "email": "{{email}}",
+  "password": "{{password}}",
+  "interests": ["coding"]
+}
+
+### 3. Register with the same username → 409 "Username is already taken"
+POST {{api}}/register
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "email": "someone_else@test.local",
+  "password": "{{password}}",
+  "interests": ["coding"]
+}
+
+### 4. Register with a bad body → 400 (lists what's wrong)
+POST {{api}}/register
+Content-Type: application/json
+
+{
+  "username": "",
+  "email": "not-an-email",
+  "password": "{{password}}",
+  "interests": []
+}
+
+### 5. Login with a wrong password → 401 "Invalid email or password"
+POST {{api}}/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "wrong-password"
+}
+
+### 6. Login without an email → 400
+POST {{api}}/login
+Content-Type: application/json
+
+{
+  "password": "{{password}}"
+}
+
+### 7. Login → 200 { user, accessToken } + Set-Cookie: refreshToken (no password or hash in the body)
+# @name login
+POST {{api}}/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### 8. Me → 200 (your profile)
+GET {{api}}/me
+Authorization: Bearer {{login.response.body.$.accessToken}}
+
+### 9. Me without a token → 401
+GET {{api}}/me
+
+### 10. Me with a broken token → 401 "Invalid access token"
+GET {{api}}/me
+Authorization: Bearer not.a.jwt
+
+### 11. Refresh with the login cookie → 200 { accessToken } + a NEW refresh cookie
+# @name refresh
+POST {{api}}/refresh
+Cookie: {{login.response.headers.Set-Cookie}}
+
+### 12. Refresh again with the OLD login cookie → 401 (each refresh token works only once)
+POST {{api}}/refresh
+Cookie: {{login.response.headers.Set-Cookie}}
+
+### 13. Refresh without a cookie → 401 "Refresh token cookie is missing"
+POST {{api}}/refresh
+
+### 14. Me with the refreshed access token → 200
+GET {{api}}/me
+Authorization: Bearer {{refresh.response.body.$.accessToken}}
+
+
+#####################################################################
+#                          USERS
+#####################################################################
+
+### 15. Get my user by id → 200
+GET {{api}}/{{login.response.body.$.user.id}}
+Authorization: Bearer {{refresh.response.body.$.accessToken}}
+
+### 16. Get someone else's user → 403 "You can only access your own account"
+GET {{api}}/00000000-0000-4000-8000-000000000000
+Authorization: Bearer {{refresh.response.body.$.accessToken}}
+
+### 17. List all users → 403 for a normal user (200 for an admin, see the end of the file)
+GET {{api}}/list
+Authorization: Bearer {{refresh.response.body.$.accessToken}}
+
+### 18. Update my profile → 200. "password", "email" and "role" are ignored (not in the allowlist)
+PATCH {{api}}/{{login.response.body.$.user.id}}
+Authorization: Bearer {{refresh.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "bio": "Testing with REST Client",
+  "interests": ["coding", "music"],
+  "password": "should-be-ignored",
+  "email": "should-be-ignored@test.local",
+  "role": "ADMIN"
+}
+
+### 19. Update with a bad avatar URL → 400
+PATCH {{api}}/{{login.response.body.$.user.id}}
+Authorization: Bearer {{refresh.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "avatarUrl": "not a url"
+}
+
+### 20. Change password with a wrong current password → 401 "Current password is incorrect"
+PATCH {{api}}/{{login.response.body.$.user.id}}/password
+Authorization: Bearer {{refresh.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "currentPassword": "wrong-password",
+  "newPassword": "{{newPassword}}"
+}
+
+### 21. Change password → 204 (also logs out every session)
+PATCH {{api}}/{{login.response.body.$.user.id}}/password
+Authorization: Bearer {{refresh.response.body.$.accessToken}}
+Content-Type: application/json
+
+{
+  "currentPassword": "{{password}}",
+  "newPassword": "{{newPassword}}"
+}
+
+### 22. Refresh after the password change → 401 (the session was revoked)
+POST {{api}}/refresh
+Cookie: {{refresh.response.headers.Set-Cookie}}
+
+### 23. Login with the OLD password → 401
+POST {{api}}/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### 24. Login with the NEW password → 200
+# @name login2
+POST {{api}}/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{newPassword}}"
+}
+
+### 25. Logout → 200 + the cookie is cleared
+POST {{api}}/logout
+Cookie: {{login2.response.headers.Set-Cookie}}
+
+### 26. Refresh with the logged-out cookie → 401
+POST {{api}}/refresh
+Cookie: {{login2.response.headers.Set-Cookie}}
+
+### 27. Logout again without a cookie → 200 (logout always succeeds)
+POST {{api}}/logout
+
+### 28. Id that is not a UUID → 403 for a normal user (400 for an admin: the owner check runs first)
+GET {{api}}/not-a-uuid
+Authorization: Bearer {{login2.response.body.$.accessToken}}
+
+### 29. Delete my account → 204 (access tokens stay valid for 15 min, even after logout)
+DELETE {{api}}/{{login.response.body.$.user.id}}
+Authorization: Bearer {{login2.response.body.$.accessToken}}
+
+### 30. Delete it again → 404 "User not found"
+DELETE {{api}}/{{login.response.body.$.user.id}}
+Authorization: Bearer {{login2.response.body.$.accessToken}}
+
+
+#####################################################################
+#                          GOOGLE (open these in the browser)
+#####################################################################
+# REST Client can't sign in to Google, so use the browser for these two:
+#
+#   https://localhost/api/auth/google
+#     → redirects to Google with a `state` value and sets the oauth_state cookie
+#   https://localhost/api/auth/google/callback?code=x&state=wrong
+#     → redirects to /auth/login?error=google_failed (state check failed)
+#
+# The request below only shows the first redirect.
+
+### 31. Start Google sign-in → 302 to accounts.google.com (sets the oauth_state cookie)
+# @no-redirect
+GET {{api}}/google
+
+
+#####################################################################
+#                          ADMIN
+#####################################################################
+# There's no API to make an admin. To try /list as an admin, register a user, run this in
+# Adminer (http://localhost:8080, server "db") or psql, then log in again:
+#
+#   UPDATE "User" SET role = 'ADMIN' WHERE email = 'rest_tester@test.local';
+#
+# Then request 17 returns 200 with every user, and request 28 returns 400.

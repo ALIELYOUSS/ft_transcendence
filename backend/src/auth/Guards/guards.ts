@@ -7,10 +7,9 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { PrismaService } from '../../prisma/prisma.service';
+import { verifyAccessToken } from '../tokens';
 
-const Jwt = require('jsonwebtoken');
-
-type AuthenticatedRequest = Request & {
+export type AuthenticatedRequest = Request & {
   user?: {
     sub: string;
   };
@@ -27,20 +26,13 @@ export class JwtGuard implements CanActivate {
       throw new UnauthorizedException('Bearer access token is required');
     }
 
-    try {
-      const payload = Jwt.verify(token, process.env.ACCESS_TOKEN_SECRET) as {
-        sub?: string;
-      };
-
-      if (!payload.sub) {
-        throw new UnauthorizedException('Invalid access token');
-      }
-
-      request.user = { sub: payload.sub };
-      return true;
-    } catch {
+    const userId = verifyAccessToken(token);
+    if (!userId) {
       throw new UnauthorizedException('Invalid access token');
     }
+
+    request.user = { sub: userId };
+    return true;
   }
 }
 

@@ -1,188 +1,38 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
-const Jwt = require('jsonwebtoken');
-
-// The only user fields ever sent to a client. Never add password, refreshedToken or googleId.
-const SAFE_USER_SELECT = {
-  id: true,
-  username: true,
-  email: true,
-  bio: true,
-  avatarUrl: true,
-  role: true,
-  createdAt: true,
-  updatedAt: true,
-  interests: { select: { name: true } },
-} satisfies Prisma.UserSelect;
-
-// Turns Prisma "unique constraint" / "record not found" errors into 409 / 404 instead of 500.
-function rethrowPrismaError(error: unknown): never {
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    if (error.code === 'P2002') {
-      const target = error.meta?.target;
-      const field = Array.isArray(target) ? target.join(', ') : String(target ?? 'value');
-      throw new ConflictException(`That ${field} is already taken`);
-    }
-    if (error.code === 'P2025') {
-      throw new NotFoundException('User not found');
-    }
-  }
-  throw error;
-}
+import type { GoogleUser } from './google/google.strategy';
+import { SAFE_USER_SELECT, interestsInput, rethrowPrismaError } from './safe-user';
+import {
+  hashRefreshToken,
+  refreshTokenMatches,
+  signAccessToken,
+  signRefreshToken,
+  verifyRefreshToken,
+} from './tokens';
 
 @Injectable()
 export class AuthService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async loginWithGoogle(googleUser: {
-    googleId: string;
-    email?: string;
-    username?: string;
-    interests?: string[];
-  }) {
-    if (!googleUser.email) {
-      throw new ConflictException('Google account does not have an email');
-    }
+  // ======================= Sessions =======================
 
-    let user = await this.prisma.user.findUnique({
-      where: { googleId: googleUser.googleId },
-    });
-
-    if (!user) {
-      user = await this.prisma.user.findUnique({
-        where: { email: googleUser.email },
-      });
-    }
-
-    let response;
-    if (user) {
-      response = await this.prisma.user.update({
-        where: { id: user.id },
-        data: {
-          googleId: googleUser.googleId,
-        },
-        select: SAFE_USER_SELECT,
-      });
-    } else {
-      const username = `${googleUser.username || googleUser.email.split('@')[0]}-${googleUser.googleId.slice(-6)}`;
-
-      response = await this.prisma.user.create({
-        data: {
-          username,
-          email: googleUser.email,
-          googleId: googleUser.googleId,
-          password: null,
-          interests: {
-            connectOrCreate: [],
-          },
-        },
-        select: SAFE_USER_SELECT,
-      });
-    }
-
-    const tokens = await this.createTokens(response.id);
-
-    return { response, ...tokens };
-  }
-
-  async login(email: string, password: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-      select: { ...SAFE_USER_SELECT, password: true },
-    });
-
-    if (!user || !user.password) {
-      throw new UnauthorizedException('Invalid email or password');
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid email or password');
-    }
-
-    const { accessToken, refreshToken } = await this.createTokens(user.id);
-
-    const { password: _, ...response } = user;
-    return { response, accessToken, refreshToken };
-  }
-
-  private async createTokens(userId: string) {
-    const jwtPayload = { sub: userId };
-    const accessToken = Jwt.sign(jwtPayload, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '15m' });
-    const refreshToken = Jwt.sign(jwtPayload, process.env.REFRESH_TOKEN_SECRET, {
-      expiresIn: '7d',
-    });
-
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { refreshedToken: await bcrypt.hash(refreshToken, 10) },
-    });
-
-    return { accessToken, refreshToken };
-  }
-
-  async refresh(refreshToken: string) {
-    let payload: {
-      email: string;
-      sub: string;
-    };
-    try {
-      payload = Jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET) as {
-        email: string;
-        sub: string;
-      };
-    } catch (error) {
-      throw new UnauthorizedException('Invalid refresh token');
-    }
-
-    const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
-    });
-
-    if (!user || !user.refreshedToken) {
-      throw new UnauthorizedException('Invalid refresh token');
-    }
-
-    const isRefreshTokenValid = await bcrypt.compare(refreshToken, user.refreshedToken);
-    if (!isRefreshTokenValid) {
-      throw new UnauthorizedException('Invalid refresh token');
-    }
-
-    const tokens = await this.createTokens(user.id);
-    return tokens;
-  }
-
-  async reg(createAuthDto: CreateAuthDto) {
-    const { email, password, username, interests } = createAuthDto;
-
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (existingUser) {
+  async register({ username, email, password, interests }: CreateAuthDto) {
+    if (await this.prisma.user.findUnique({ where: { email }, select: { id: true } })) {
       throw new ConflictException('Email is already registered');
     }
-
-    const existingUsername = await this.prisma.user.findUnique({
-      where: { username },
-      select: { id: true },
-    });
-
-    if (existingUsername) {
+    if (await this.prisma.user.findUnique({ where: { username }, select: { id: true } })) {
       throw new ConflictException('Username is already taken');
     }
-
-    const hashPass = await bcrypt.hash(password, 10);
 
     // The checks above give clear messages; the catch still covers two sign-ups racing.
     return this.prisma.user
@@ -190,72 +40,117 @@ export class AuthService {
         data: {
           username,
           email,
-          password: hashPass,
-          interests: {
-            connectOrCreate: interests.map(interestName => ({
-              where: {
-                name: interestName,
-              },
-              create: {
-                name: interestName,
-              },
-            })),
-          },
+          password: await bcrypt.hash(password, 10),
+          interests: interestsInput(interests),
         },
         select: SAFE_USER_SELECT,
       })
       .catch(rethrowPrismaError);
   }
 
-  create(createAuthDto: CreateAuthDto) {
-    return this.reg(createAuthDto);
-  }
-
-  findAll() {
-    return this.prisma.user.findMany({
-      select: {
-        id: true,
-        email: true,
-      },
+  async login(email: string, password: string) {
+    const found = await this.prisma.user.findUnique({
+      where: { email },
+      select: { ...SAFE_USER_SELECT, password: true },
     });
+
+    // Same message for "no such user" and "wrong password", so emails can't be guessed.
+    if (!found?.password || !(await bcrypt.compare(password, found.password))) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    const { password: _, ...user } = found;
+    return { user, ...(await this.issueTokens(user.id)) };
   }
 
-  findOne(id: string) {
-    return this.prisma.user.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        email: true,
-      },
+  async loginWithGoogle({ googleId, email, emailVerified, username, avatarUrl }: GoogleUser) {
+    // Already linked: trust the Google id.
+    const linked = await this.prisma.user.findUnique({
+      where: { googleId },
+      select: { id: true, avatarUrl: true },
     });
+
+    // Linking or creating by email is only safe when Google has verified the address.
+    // Otherwise someone could use an unverified copy of your email to take over your account.
+    if (!linked && (!email || !emailVerified)) {
+      throw new ForbiddenException('Your Google email address is not verified');
+    }
+
+    const existing =
+      linked ??
+      (await this.prisma.user.findUnique({ where: { email }, select: { id: true, avatarUrl: true } }));
+
+    const user = existing
+      ? await this.prisma.user.update({
+          where: { id: existing.id },
+          // Keep an avatar the user already has.
+          data: { googleId, avatarUrl: existing.avatarUrl ?? avatarUrl },
+          select: SAFE_USER_SELECT,
+        })
+      : await this.prisma.user
+          .create({
+            data: {
+              googleId,
+              email: email!,
+              avatarUrl,
+              username: `${username || email!.split('@')[0]}-${googleId.slice(-6)}`,
+            },
+            select: SAFE_USER_SELECT,
+          })
+          .catch(rethrowPrismaError);
+
+    return { user, ...(await this.issueTokens(user.id)) };
   }
 
-  async logout(refreshToken: string) {
-    let payload: { sub: string };
+  // Trades a valid refresh token for a new pair. The old refresh token stops working.
+  async refresh(refreshToken: string) {
+    const userId = verifyRefreshToken(refreshToken);
+    const stored = userId
+      ? await this.prisma.user.findUnique({ where: { id: userId }, select: { refreshedToken: true } })
+      : null;
 
-    try {
-      payload = Jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET) as { sub: string };
-    } catch {
+    if (!userId || !stored?.refreshedToken || !refreshTokenMatches(refreshToken, stored.refreshedToken)) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    await this.prisma.user.updateMany({
-      where: {
-        id: payload.sub,
-        refreshedToken: {
-          not: null,
-        },
-      },
-      data: {
-        refreshedToken: null,
-      },
-    });
-
-    return { message: 'Logged out successfully' };
+    return this.issueTokens(userId);
   }
 
-  update(id: string, updateAuthDto: UpdateAuthDto) {
-    const { username, bio, avatarUrl, interests } = updateAuthDto;
+  // Revokes the stored refresh token. An invalid token is ignored, so logout always succeeds.
+  async logout(refreshToken: string) {
+    const userId = verifyRefreshToken(refreshToken);
+    if (userId) {
+      await this.prisma.user.updateMany({ where: { id: userId }, data: { refreshedToken: null } });
+    }
+  }
+
+  private async issueTokens(userId: string) {
+    const accessToken = signAccessToken(userId);
+    const refreshToken = signRefreshToken(userId);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { refreshedToken: hashRefreshToken(refreshToken) },
+    });
+
+    return { accessToken, refreshToken };
+  }
+
+  // ======================= Users =======================
+
+  findAll() {
+    return this.prisma.user.findMany({ select: SAFE_USER_SELECT });
+  }
+
+  async findOne(id: string) {
+    const user = await this.prisma.user.findUnique({ where: { id }, select: SAFE_USER_SELECT });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
+  }
+
+  update(id: string, { username, bio, avatarUrl, interests }: UpdateAuthDto) {
     return this.prisma.user
       .update({
         where: { id },
@@ -263,15 +158,7 @@ export class AuthService {
           username,
           bio,
           avatarUrl,
-          ...(interests && {
-            interests: {
-              set: [],
-              connectOrCreate: interests.map(name => ({
-                where: { name },
-                create: { name },
-              })),
-            },
-          }),
+          ...(interests && { interests: { set: [], ...interestsInput(interests) } }),
         },
         select: SAFE_USER_SELECT,
       })
@@ -279,25 +166,17 @@ export class AuthService {
   }
 
   async changePassword(id: string, { currentPassword, newPassword }: ChangePasswordDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      select: { password: true },
-    });
-
+    const user = await this.prisma.user.findUnique({ where: { id }, select: { password: true } });
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
     // Google-only accounts have no password yet and may set one directly.
-    if (user.password) {
-      const isValid =
-        currentPassword !== undefined && (await bcrypt.compare(currentPassword, user.password));
-      if (!isValid) {
-        throw new UnauthorizedException('Current password is incorrect');
-      }
+    if (user.password && !(currentPassword && (await bcrypt.compare(currentPassword, user.password)))) {
+      throw new UnauthorizedException('Current password is incorrect');
     }
 
-    // Clearing the refresh token logs out other sessions after a password change.
+    // Clearing the refresh token logs out every session.
     await this.prisma.user.update({
       where: { id },
       data: { password: await bcrypt.hash(newPassword, 10), refreshedToken: null },

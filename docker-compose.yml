@@ -36,6 +36,9 @@ services:
       FRONTEND_URL: https://localhost
     env_file:
       - ./backend/.env
+    volumes:
+      # Keep uploaded images when the container is rebuilt.
+      - ./data/uploads:/app/uploads
     ports:
       - "3001:3001"
     depends_on:

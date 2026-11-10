@@ -2,6 +2,8 @@
 
 import { GoogleButton } from '@/components/auth/google-button';
 import { PrimaryButton } from '@/components/auth/primary-button';
+import { login, register } from '@/lib/auth';
+import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 import { InterestPicker } from './interest-picker';
 import { LegalNotice } from './legal-notice';
@@ -9,46 +11,28 @@ import { SignupFields } from './signup-fields';
 import { SignupPrompt } from './signup-prompt';
 
 export function SignupCard() {
+  const router = useRouter();
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
+  // Create the account, log straight in, then go to the feed.
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    // Save the form now: React sets event.currentTarget to null once the handler awaits.
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-
-    const body = {
-      username: formData.get('username'),
-      email: formData.get('email'),
-      password: formData.get('password'),
-      interests: selectedInterests,
-    };
+    const formData = new FormData(event.currentTarget); // read before any await
+    const email = String(formData.get('email'));
+    const password = String(formData.get('password'));
 
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
+      await register({
+        username: String(formData.get('username')),
+        email,
+        password,
+        interests: selectedInterests,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
-      }
-
-      setSuccess('Account created successfully');
-      setError('');
-      form.reset();
-      setSelectedInterests([]);
-    } catch (error) {
-      setSuccess('');
-      setError(error instanceof Error ? error.message : 'Something went wrong');
+      await login(email, password);
+      router.push('/feed');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong');
     }
   }
 
@@ -81,11 +65,6 @@ export function SignupCard() {
         {error && (
           <p className="text-sm text-red-600" role="alert">
             {error}
-          </p>
-        )}
-        {success && (
-          <p className="text-sm text-green-700" role="status">
-            {success}
           </p>
         )}
       </form>

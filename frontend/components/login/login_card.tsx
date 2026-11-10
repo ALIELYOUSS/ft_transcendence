@@ -1,38 +1,33 @@
 'use client';
 
 import { GoogleButton } from '@/components/auth/google-button';
-import { useState } from 'react';
+import { GOOGLE_ERRORS, login } from '@/lib/auth';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { LegalNotice } from './legal_notice';
 import { SignupPrompt } from './signup_prompt';
 import Image from 'next/image';
 
 export function LoginCard() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  // After a failed Google sign-in the backend sends us to /auth/login?error=<code>.
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get('error');
+    if (code) setError(GOOGLE_ERRORS[code] ?? 'Sign-in failed. Please try again.');
+  }, []);
 
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          email: email,
-          password: password,
-        }),
-      });
-
-      if (!res.ok) {
-        // throw new ERROR("error")
-        return 404;
-      }
-    } catch (error) {
-      console.error('Error in handleLogin function:', error);
+      await login(email, password);
+      router.push('/feed');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong');
     }
   };
 
@@ -96,6 +91,11 @@ export function LoginCard() {
         >
           Sign in
         </button>
+        {error && (
+          <p className="text-sm text-red-600" role="alert">
+            {error}
+          </p>
+        )}
       </form>
 
       <div className="mt-2">

@@ -2,15 +2,18 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
+  Logger,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
   Req,
   Res,
+  UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
@@ -19,64 +22,101 @@ import { AuthService } from './auth.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { LoginDto } from './dto/login.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
-import { AdminGuard, JwtGuard, OwnerOrAdminGuard } from './Guards/guards';
+import { GoogleCallbackGuard } from './google/google-callback.guard';
+import type { GoogleUser } from './google/google.strategy';
+import { AdminGuard, type AuthenticatedRequest, JwtGuard, OwnerOrAdminGuard } from './Guards/guards';
+import { REFRESH_COOKIE, clearRefreshCookie, setRefreshCookie } from './tokens';
 
+const frontendUrl = () => process.env.FRONTEND_URL || 'https://localhost';
+
+/*
+ * Every route is reached from the browser as /api/auth/... (nginx strips /api).
+ * How the pieces fit together is explained in ./README.md.
+ */
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(private readonly authService: AuthService) {}
 
-  @Get('google')
-  @UseGuards(AuthGuard('google'))
-  googleLogin() {}
+  // ======================= Sessions =======================
 
-  @Post('logout')
-  async logout(@Body() { refreshToken }: RefreshTokenDto) {
-    return this.authService.logout(refreshToken);
-  }
-
-  @Post('refresh')
-  async refresh(@Body() { refreshToken }: RefreshTokenDto) {
-    return this.authService.refresh(refreshToken);
-  }
-
-  @Get('google/callback')
-  @UseGuards(AuthGuard('google'))
-  async googleCallback(@Req() request: Request, @Res() response: Response) {
-    const tokens = await this.authService.loginWithGoogle(
-      request.user as {
-        googleId: string;
-        email?: string;
-        username?: string;
-      }
-    );
-
-    response.cookie('refreshToken', tokens.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost';
-    const callbackUrl = new URL(`${frontendUrl}/auth/google/callback`);
-    callbackUrl.searchParams.set('accessToken', tokens.accessToken);
-    callbackUrl.searchParams.set('refreshToken', tokens.refreshToken);
-
-    return response.redirect(callbackUrl.toString());
+  @Post('register')
+  register(@Body() dto: CreateAuthDto) {
+    return this.authService.register(dto);
   }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  login(@Body() credentials: LoginDto) {
-    return this.authService.login(credentials.email, credentials.password);
+  async login(@Body() { email, password }: LoginDto, @Res({ passthrough: true }) res: Response) {
+    const { user, accessToken, refreshToken } = await this.authService.login(email, password);
+    setRefreshCookie(res, refreshToken);
+    return { user, accessToken };
   }
 
-  @Post('register')
-  create(@Body() createAuthDto: CreateAuthDto) {
-    return this.authService.create(createAuthDto);
+  // Uses the refresh cookie to get a new access token (and rotates the cookie).
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const cookie: string | undefined = req.cookies?.[REFRESH_COOKIE];
+    if (!cookie) {
+      throw new UnauthorizedException('Refresh token cookie is missing');
+    }
+    const { accessToken, refreshToken } = await this.authService.refresh(cookie);
+    setRefreshCookie(res, refreshToken);
+    return { accessToken };
   }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const cookie: string | undefined = req.cookies?.[REFRESH_COOKIE];
+    if (cookie) {
+      await this.authService.logout(cookie);
+    }
+    clearRefreshCookie(res);
+    return { message: 'Logged out successfully' };
+  }
+
+  // Step 1: redirect the browser to Google's sign-in page.
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  googleLogin() {}
+
+  // Step 2: Google sends the browser back here. On success: set the refresh cookie and
+  // go to /feed.
+  // On failure: back to the login page with an error code it can show.
+  @Get('google/callback')
+  @UseGuards(GoogleCallbackGuard)
+  async googleCallback(@Req() req: Request, @Res() res: Response) {
+    const fail = (code: string) => res.redirect(`${frontendUrl()}/auth/login?error=${code}`);
+
+    if (!req.user) {
+      return fail('google_failed');
+    }
+    try {
+      const { refreshToken } = await this.authService.loginWithGoogle(req.user as GoogleUser);
+      setRefreshCookie(res, refreshToken);
+      return res.redirect(`${frontendUrl()}/feed`);
+    } catch (error) {
+      if (error instanceof ForbiddenException) {
+        return fail('google_email_unverified');
+      }
+      this.logger.error('Google sign-in failed', error instanceof Error ? error.stack : error);
+      return fail('google_failed');
+    }
+  }
+
+  // The logged-in user's own profile.
+  @Get('me')
+  @UseGuards(JwtGuard)
+  me(@Req() req: AuthenticatedRequest) {
+    return this.authService.findOne(req.user!.sub);
+  }
+
+  // ======================= Users =======================
+  // ('list' and 'me' are declared before ':id' so they aren't read as an id.)
 
   @Get('list')
   @UseGuards(JwtGuard, AdminGuard)
@@ -92,18 +132,15 @@ export class AuthController {
 
   @Patch(':id')
   @UseGuards(JwtGuard, OwnerOrAdminGuard)
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateAuthDto: UpdateAuthDto) {
-    return this.authService.update(id, updateAuthDto);
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateAuthDto) {
+    return this.authService.update(id, dto);
   }
 
   @Patch(':id/password')
   @UseGuards(JwtGuard, OwnerOrAdminGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  changePassword(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() changePasswordDto: ChangePasswordDto
-  ) {
-    return this.authService.changePassword(id, changePasswordDto);
+  changePassword(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ChangePasswordDto) {
+    return this.authService.changePassword(id, dto);
   }
 
   @Delete(':id')
