@@ -8,7 +8,6 @@ import {
   findEventColor,
   HALF_HOUR_MINUTES,
   HOUR_HEIGHT,
-  isPastSlot,
   LAST_HOUR,
   pad,
 } from "./calendar-utils";
@@ -19,12 +18,9 @@ type WeekCalendarViewProps = {
   events: CalendarEvent[];
   currentUserId: string;
   getAttendeeCount: (event: CalendarEvent) => number;
-  onCreate: (date: Date, start?: string) => void;
-  onEdit: (event: CalendarEvent) => void;
-  onBook: (event: CalendarEvent) => void;
 };
 
-export function WeekCalendarView({ days, events, currentUserId, getAttendeeCount, onCreate, onEdit, onBook }: WeekCalendarViewProps) {
+export function WeekCalendarView({ days, events, currentUserId, getAttendeeCount }: WeekCalendarViewProps) {
   const hours = Array.from({ length: LAST_HOUR - FIRST_HOUR }, (_, index) => FIRST_HOUR + index);
   const halfHourSlots = Array.from({ length: hours.length * 2 }, (_, index) => {
     const minutes = FIRST_HOUR * 60 + index * HALF_HOUR_MINUTES;
@@ -59,14 +55,11 @@ export function WeekCalendarView({ days, events, currentUserId, getAttendeeCount
             return (
               <div key={dayKey} style={{ height: hours.length * HOUR_HEIGHT }} className={`relative border-l border-[#edf0f5] ${dayKey === dateKey(new Date()) ? "bg-[#fffdf7]" : ""}`}>
                 {halfHourSlots.map((time) => (
-                  <button
+                  <div
                     key={time}
-                    type="button"
-                    disabled={isPastSlot(dayKey, time)}
-                    aria-label={`Add slot ${format(day, "EEE, MMM d")} at ${displayTime(time)}`}
-                    onClick={() => onCreate(day, time)}
+                    aria-hidden="true"
                     style={{ height: HOUR_HEIGHT / 2 }}
-                    className={`block w-full border-b hover:bg-[#fff9e9] disabled:cursor-not-allowed disabled:bg-[#f8f8f8] ${time.endsWith(":00") ? "border-[#e5e8ef]" : "border-[#f1f2f5]"}`}
+                    className={`border-b ${time.endsWith(":00") ? "border-[#e5e8ef]" : "border-[#f1f2f5]"}`}
                   />
                 ))}
                 {events.filter((event) => event.date === dayKey).map((event) => {
@@ -85,16 +78,13 @@ export function WeekCalendarView({ days, events, currentUserId, getAttendeeCount
                     </>
                   );
                   return (
-                    <button
+                    <div
                       key={event.id}
-                      type="button"
-                      aria-label={isMine ? undefined : `View ${event.title} hosted by ${event.user.name ?? "friend"}`}
-                      onClick={() => isMine ? onEdit(event) : onBook(event)}
                       style={{ top, height }}
                       className={`absolute left-1 right-1 z-10 overflow-hidden rounded-md border p-1.5 text-left ${color.event}`}
                     >
                       {details}
-                    </button>
+                    </div>
                   );
                 })}
               </div>

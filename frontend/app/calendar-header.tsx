@@ -1,29 +1,25 @@
 "use client";
 
 import { format } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { CalendarView } from "./calendar-utils";
 
 type CalendarHeaderProps = {
   selectedDate: Date;
   periodLabel: string;
   view: CalendarView;
-  canCreate: boolean;
   onToday: () => void;
   onShift: (amount: number) => void;
   onViewChange: (view: CalendarView) => void;
-  onCreate: () => void;
 };
 
 export function CalendarHeader({
   selectedDate,
   periodLabel,
   view,
-  canCreate,
   onToday,
   onShift,
   onViewChange,
-  onCreate,
 }: CalendarHeaderProps) {
   return (
     <header className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -51,7 +47,6 @@ export function CalendarHeader({
             </button>
           ))}
         </div>
-        <button type="button" disabled={!canCreate} onClick={onCreate} className="flex items-center gap-1 rounded-md bg-[#efb92d] px-3 py-2 text-xs font-semibold text-[#282313] hover:bg-[#e7ad1d] disabled:cursor-not-allowed disabled:opacity-45"><Plus size={14} /> New Slot</button>
       </div>
     </header>
   );

@@ -6,15 +6,6 @@ import { Map, MapPin } from "lucide-react";
 import Sidebar from "../component/leftbar";
 import { useState,useEffect }  from "react";
 
-const time = new Date().toLocaleTimeString("en-GB", {
-  hour: "2-digit",
-  minute: "2-digit",
-})
-// just for the page title "ktkhedem ghire mea server "
-/*
-export const metadata = {
-    title:"wemeet slots",
-}*/
 
 
 export default function Home() {

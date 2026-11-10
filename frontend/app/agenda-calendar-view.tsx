@@ -9,12 +9,9 @@ type AgendaCalendarViewProps = {
   events: CalendarEvent[];
   currentUserId: string;
   getAttendeeCount: (event: CalendarEvent) => number;
-  onCreate: (date: Date) => void;
-  onEdit: (event: CalendarEvent) => void;
-  onBook: (event: CalendarEvent) => void;
 };
 
-export function AgendaCalendarView({ days, events, currentUserId, getAttendeeCount, onCreate, onEdit, onBook }: AgendaCalendarViewProps) {
+export function AgendaCalendarView({ days, events, currentUserId, getAttendeeCount }: AgendaCalendarViewProps) {
   return (
     <div className="divide-y divide-[#edf0f5]">
       {days.map((day) => {
@@ -28,23 +25,19 @@ export function AgendaCalendarView({ days, events, currentUserId, getAttendeeCou
                 const color = findEventColor(event, currentUserId);
                 const isMine = event.user.id === currentUserId;
                 return (
-                  <button
+                  <div
                     key={event.id}
-                    type="button"
-                    onClick={() => isMine ? onEdit(event) : onBook(event)}
                     className={`flex w-full items-center gap-3 rounded border px-2 py-1.5 text-left ${color.event}`}
                   >
                     <span className="text-[10px]">{displayTime(event.start)} - {displayTime(event.end)}</span>
                     <span className="truncate text-xs font-semibold">{event.title}</span>
                     <span className="text-[10px]">{isMine ? "You" : event.user.name ?? "Friend"} · {event.category} · {getAttendeeCount(event)}/{event.capacity}</span>
                     <span className="ml-auto hidden truncate text-[10px] opacity-70 sm:block">{event.location}</span>
-                  </button>
+                  </div>
                 );
               })}
               {dayEvents.length === 0 && (
-                <button type="button" disabled={dayKey < dateKey(new Date())} onClick={() => onCreate(day)} className="text-[11px] text-[#82899a] hover:text-[#b47c00] disabled:cursor-not-allowed disabled:opacity-40">
-                  No slots · add one
-                </button>
+                <p className="text-[11px] text-[#82899a]">No slots</p>
               )}
             </div>
           </div>
